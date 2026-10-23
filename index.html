@@ -14,9 +14,10 @@
     <script type="text/javascript" src="https://unpkg.com/@majidh1/jalalidatepicker/dist/jalalidatepicker.min.js"></script>
     <!-- کتابخانه بررسی متادیتای عکس (EXIF) -->
     <script src="https://cdn.jsdelivr.net/npm/exifr/dist/lite.umd.js"></script>
+    <!-- کتابخانه ارتباط با Supabase (آماده برای دیتابیس ابری) -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
     <style>
-        /* تنظیمات پایه برای سازگاری کامل با موبایل */
         html, body {
             font-family: 'Vazirmatn', sans-serif;
             background-color: #0f172a;
@@ -28,7 +29,6 @@
             -webkit-tap-highlight-color: transparent;
         }
 
-        /* جلوگیری از زوم خودکار روی موبایل هنگام کلیک روی اینپوت‌ها */
         input, select, textarea {
             font-size: 16px !important;
         }
@@ -86,7 +86,7 @@
 
             <button onclick="enableAutoNotifications()" id="pushBtn" class="bg-indigo-600/20 active:bg-indigo-600/30 text-indigo-300 border border-indigo-500/40 px-3 py-2 rounded-xl text-[11px] font-bold flex items-center gap-1.5 shrink-0 transition">
                 <span>🔔</span>
-                <span id="pushBtnText">فعال‌سازی یادآور خودکار</span>
+                <span id="pushBtnText">یادآور خودکار</span>
             </button>
         </div>
     </header>
@@ -299,7 +299,7 @@
         </div>
     </nav>
 
-    <!-- مودال‌های سیستمی (تداخل، آپلود عکس، داوطلب شدن) -->
+    <!-- مودال‌های سیستمی -->
     <div id="collisionModal" class="fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-sm hidden flex items-center justify-center p-3.5">
         <div class="app-card bg-slate-900 border-2 border-amber-500/60 w-full max-w-md rounded-3xl p-4 space-y-4">
             <div class="flex items-center gap-2 text-amber-400 font-black text-sm">
@@ -379,6 +379,17 @@
     </div>
 
     <script>
+        // لایه ذخیره‌سازی محلی (Production Local Storage)
+        const STORAGE_KEY = 'KHABGAH_YAR_PROD_DATA_V2';
+        
+        // تنظیمات اتصال ابری Supabase (کافی است URL و Key خود را در صورت تمایل اینجا وارد کنید)
+        const SUPABASE_URL = 'https://faeysshpitmqbqpijtyi.supabase.co'; 
+        const SUPABASE_KEY = 'sb_publishable_ak3uAyt9OxzspXyblRZgsw_tLJpiiC-'; 
+        let supabaseClient = null;
+        if (SUPABASE_URL && SUPABASE_KEY) {
+            supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        }
+
         jalaliDatepicker.startWatch();
 
         function toggleDrawer(drawerId, iconId, forceOpen = null) {
@@ -479,6 +490,38 @@
         let pendingCollisionTask = null;
         let conflictingExistingTask = null;
         let verifyPhotosState = { before: false, after: false, beforeHash: "", afterHash: "", metaText: "" };
+
+        function loadSavedData() {
+            try {
+                const saved = localStorage.getItem(STORAGE_KEY);
+                if (saved) {
+                    const parsed = JSON.parse(saved);
+                    if (parsed.members) members = parsed.members;
+                    if (parsed.tasks) tasks = parsed.tasks;
+                    if (parsed.currentPreset) {
+                        currentPreset = parsed.currentPreset;
+                        document.getElementById('spacePresetSelect').value = currentPreset;
+                    }
+                    if (parsed.usedPhotoHashes) usedPhotoHashes = new Set(parsed.usedPhotoHashes);
+                }
+            } catch (e) {
+                console.error("خطا در بازیابی داده‌ها", e);
+            }
+        }
+
+        function saveCurrentData() {
+            try {
+                const payload = {
+                    members,
+                    tasks,
+                    currentPreset,
+                    usedPhotoHashes: Array.from(usedPhotoHashes)
+                };
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+            } catch (e) {
+                console.error("خطا در ذخیره‌سازی داده‌ها", e);
+            }
+        }
 
         function changeSpacePreset() {
             currentPreset = document.getElementById('spacePresetSelect').value;
@@ -765,6 +808,8 @@
         }
 
         function renderAll() {
+            saveCurrentData();
+
             renderFormSelects();
             renderZoneCapacityButtons();
             renderSeniorSelectors();
@@ -828,6 +873,7 @@
         }
 
         init24HourTimeSelectors();
+        loadSavedData();
         renderAll();
     </script>
 </body>
