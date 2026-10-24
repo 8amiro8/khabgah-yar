@@ -27,7 +27,6 @@
             -webkit-tap-highlight-color: transparent;
         }
 
-        /* جلوگیری از زوم خودکار در موبایل هنگام لمس ورودی‌ها */
         input, select, textarea {
             font-size: 16px !important;
         }
@@ -400,7 +399,6 @@
         const VALID_ZONES = ["اتاق ۱", "اتاق ۲", "پذیرایی"];
         let selectedSleepZone = "اتاق ۱";
 
-        // لیست اعضا و نوبت‌ها در ابتدا کاملاً خالی هستند و پس از لاگین از سرور بارگذاری می‌شوند
         let members = [];
         let tasks = [];
 
@@ -411,7 +409,7 @@
         jalaliDatepicker.startWatch();
 
         // =========================================================================
-        // ۲. سیستم احراز هویت واحد (Login / Register با PIN Code - نسخه دیباگ‌شده)
+        // ۲. سیستم احراز هویت واحد (Login / Register با PIN Code)
         // =========================================================================
         function switchAuthMode(mode) {
             authMode = mode;
@@ -445,7 +443,6 @@
             btn.innerText = "⏳ در حال بررسی امنیتی...";
 
             try {
-                // ۱. استعلام وضعیت واحد از جدول units
                 const { data: unitData, error: selectErr } = await supabaseClient
                     .from('units')
                     .select('*')
@@ -459,18 +456,14 @@
                         errEl.innerText = "⛔ این شماره واحد قبلاً ثبت شده! روی تب «ورود به واحد» کلیک کنید.";
                         errEl.classList.remove('hidden');
                     } else {
-                        // ۲. ثبت واحد جدید در دیتابیس
                         const { error: insErr } = await supabaseClient
                             .from('units')
                             .insert([{ room_id: roomInput, pin_code: pinInput, preset: 'full_suite' }]);
                         
                         if (insErr) throw insErr;
-                        
-                        // ورود مستقیم به پنل بلافاصله پس از ساخت واحد
                         await unlockDashboard(roomInput, pinInput, 'full_suite');
                     }
                 } else {
-                    // حالت ورود به واحد (Login)
                     if (!unitData) {
                         errEl.innerText = "❌ واحدی با این کد یافت نشد! ابتدا از تب «ثبت واحد جدید» آن را بسازید.";
                         errEl.classList.remove('hidden');
@@ -498,18 +491,14 @@
             const presetSelect = document.getElementById('spacePresetSelect');
             if (presetSelect) presetSelect.value = currentPreset;
             
-            // ذخیره نشست در مرورگر برای ورود خودکار در دفعات بعدی
             localStorage.setItem('KHABGAH_SESSION_V1', JSON.stringify({ roomId, pinCode }));
             
-            // ۱. مخفی‌سازی قطعی صفحه قفل و نمایش نام واحد
             document.getElementById('currentRoomDisplay').innerText = `واحد ${roomId}`;
             const overlay = document.getElementById('authOverlay');
             overlay.classList.add('hidden');
             overlay.style.display = 'none';
             
             showToast(`خوش آمدید! وارد پنل اختصاصی واحد ${roomId} شدید.`, "🔓");
-
-            // ۲. دریافت اطلاعات اختصاصی واحد از سرور
             await loadCloudData();
         }
 
@@ -530,60 +519,59 @@
         async function loadCloudData(showSyncToast = false) {
             if (!CURRENT_ROOM) return;
             try {
-                // دریافت اعضای همین واحد
                 const { data: memData, error: memErr } = await supabaseClient
                     .from('members')
                     .select('*')
                     .eq('room_id', CURRENT_ROOM)
                     .order('id', { ascending: true });
 
-                if (!memErr) {
-                    members = (memData || []).map(m => ({
-                        id: m.id,
-                        name: m.name,
-                        sleepZone: m.sleep_zone,
-                        isSenior: m.is_senior || false,
-                        daysAgo: m.days_ago || 0,
-                        cycleLimit: m.cycle_limit || 9,
-                        lastAreaIdx: m.last_area_idx || 0,
-                        points: m.points || 0
-                    }));
-                }
+                if (memErr) throw memErr;
 
-                // دریافت نوبت‌های همین واحد
+                members = (memData || []).map(m => ({
+                    id: m.id,
+                    name: m.name,
+                    sleepZone: m.sleep_zone,
+                    isSenior: m.is_senior || false,
+                    daysAgo: m.days_ago || 0,
+                    cycleLimit: m.cycle_limit || 9,
+                    lastAreaIdx: m.last_area_idx || 0,
+                    points: m.points || 0
+                }));
+
                 const { data: taskData, error: taskErr } = await supabaseClient
                     .from('tasks')
                     .select('*')
                     .eq('room_id', CURRENT_ROOM)
                     .order('id', { ascending: true });
 
-                if (!taskErr) {
-                    tasks = (taskData || []).map(t => ({
-                        id: t.id,
-                        memberId: t.member_id,
-                        memberName: t.member_name,
-                        sleepZone: t.sleep_zone,
-                        partnerName: t.partner_name,
-                        area: t.area,
-                        date: t.date,
-                        start: t.start_time,
-                        end: t.end_time,
-                        status: t.status,
-                        score: t.score || 0,
-                        pendingStar: t.pending_star || 0,
-                        hasVoted: t.has_voted || false
-                    }));
-                }
+                if (taskErr) throw taskErr;
+
+                tasks = (taskData || []).map(t => ({
+                    id: t.id,
+                    memberId: t.member_id,
+                    memberName: t.member_name,
+                    sleepZone: t.sleep_zone,
+                    partnerName: t.partner_name,
+                    area: t.area,
+                    date: t.date,
+                    start: t.start_time,
+                    end: t.end_time,
+                    status: t.status,
+                    score: t.score || 0,
+                    pendingStar: t.pending_star || 0,
+                    hasVoted: t.has_voted || false
+                }));
 
                 renderAll();
                 if (showSyncToast) showToast("اطلاعات واحد با سرور همگام‌سازی شد!", "🔄");
             } catch (e) {
                 console.error("خطا در دریافت اطلاعات واحد:", e);
+                showToast(`خطا در دریافت اطلاعات: ${e.message}`, "⚠️");
             }
         }
 
         // =========================================================================
-        // ۴. مدیریت اعضا، اتاق‌ها و ارشدها (در دیتابیس ابری)
+        // ۴. مدیریت اعضا، اتاق‌ها و ارشدها (با مدیریت خطای کامل)
         // =========================================================================
         function getZoneCount(zoneName, excludeMemberId = null) {
             return members.filter(m => m.sleepZone === zoneName && m.id !== excludeMemberId).length;
@@ -620,22 +608,25 @@
             renderZoneCapacityButtons();
         }
 
+        // تابع اصلاح‌شده افزودن عضو با قابلیت هندلینگ کامل خطا
         async function addMember() {
             const inp = document.getElementById('memberNameInput');
             const name = inp.value.trim();
+            const errEl = document.getElementById('memberNameError');
+            
             if (!name) {
-                document.getElementById('memberNameError').classList.remove('hidden');
+                if (errEl) errEl.classList.remove('hidden');
+                showToast("لطفاً نام عضو را وارد کنید!", "⚠️");
                 return;
             }
-            document.getElementById('memberNameError').classList.add('hidden');
+            if (errEl) errEl.classList.add('hidden');
 
             if (getZoneCount(selectedSleepZone) >= MAX_ZONE_CAPACITY) {
-                showToast(`ظرفیت ${selectedSleepZone} تکمیل است! بخش دیگری را انتخاب کنید.`, "⛔");
+                showToast(`⛔ ظرفیت ${selectedSleepZone} تکمیل است (حداکثر ۴ نفر)!`, "⚠️");
                 return;
             }
 
             const newMember = {
-                id: Date.now(),
                 room_id: CURRENT_ROOM,
                 name: name,
                 sleep_zone: selectedSleepZone,
@@ -647,13 +638,19 @@
             };
 
             const { error } = await supabaseClient.from('members').insert([newMember]);
-            if (!error) {
-                inp.value = "";
-                await loadCloudData();
-                showToast(`${name} به واحد اضافه شد!`, "👤");
+
+            if (error) {
+                console.error("خطای دیتابیس در ثبت عضو:", error);
+                showToast(`❌ خطا در ثبت عضو: ${error.message}`, "⚠️");
+                return;
             }
+
+            inp.value = "";
+            await loadCloudData();
+            showToast(`${name} با موفقیت به واحد اضافه شد!`, "👤");
         }
 
+        // تابع اصلاح‌شده ثبت گروهی اعضا
         async function addBulkMembers() {
             const raw = document.getElementById('bulkMembersInput').value.trim();
             if (!raw) return;
@@ -670,7 +667,6 @@
                 const availableZone = VALID_ZONES.find(z => tempZones[z] < MAX_ZONE_CAPACITY) || "پذیرایی";
                 tempZones[availableZone]++;
                 payload.push({
-                    id: Date.now() + i,
                     room_id: CURRENT_ROOM,
                     name: n,
                     sleep_zone: availableZone,
@@ -683,7 +679,12 @@
             });
 
             if (payload.length > 0) {
-                await supabaseClient.from('members').insert(payload);
+                const { error } = await supabaseClient.from('members').insert(payload);
+                if (error) {
+                    console.error("خطای ثبت گروهی اعضا:", error);
+                    showToast(`❌ خطا در ثبت گروهی: ${error.message}`, "⚠️");
+                    return;
+                }
                 document.getElementById('bulkMembersInput').value = "";
                 await loadCloudData();
                 showToast("اعضا با موفقیت در واحد ثبت شدند!", "🎉");
@@ -761,7 +762,6 @@
             }
 
             const newTask = {
-                id: Date.now(),
                 room_id: CURRENT_ROOM,
                 member_id: member.id,
                 member_name: member.name,
@@ -778,11 +778,14 @@
             };
 
             const { error } = await supabaseClient.from('tasks').insert([newTask]);
-            if (!error) {
-                toggleDrawer('newSlotDrawer', 'newSlotDrawerIcon', false);
-                await loadCloudData();
-                showToast("نوبت نظافت در واحد ثبت شد!", "🚀");
+            if (error) {
+                showToast(`خطا در ثبت نوبت: ${error.message}`, "⚠️");
+                return;
             }
+            
+            toggleDrawer('newSlotDrawer', 'newSlotDrawerIcon', false);
+            await loadCloudData();
+            showToast("نوبت نظافت در واحد ثبت شد!", "🚀");
         }
 
         async function deleteTask(id) {
