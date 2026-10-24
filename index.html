@@ -27,7 +27,7 @@
             -webkit-tap-highlight-color: transparent;
         }
 
-        /* جلوگیری از زوم خودکار در موبایل‌های آیفون هنگام لمس ورودی‌ها */
+        /* جلوگیری از زوم خودکار در موبایل هنگام لمس ورودی‌ها */
         input, select, textarea {
             font-size: 16px !important;
         }
@@ -411,7 +411,7 @@
         jalaliDatepicker.startWatch();
 
         // =========================================================================
-        // ۲. سیستم احراز هویت واحد (Login / Register با PIN Code)
+        // ۲. سیستم احراز هویت واحد (Login / Register با PIN Code - نسخه دیباگ‌شده)
         // =========================================================================
         function switchAuthMode(mode) {
             authMode = mode;
@@ -433,6 +433,8 @@
             const errEl = document.getElementById('authErrorMsg');
             const btn = document.getElementById('authSubmitBtn');
 
+            errEl.classList.add('hidden');
+
             if (!roomInput || !pinInput) {
                 errEl.innerText = "⚠️ لطفاً شماره واحد و رمز عبور را وارد کنید!";
                 errEl.classList.remove('hidden');
@@ -443,30 +445,36 @@
             btn.innerText = "⏳ در حال بررسی امنیتی...";
 
             try {
-                const { data: unitData, error } = await supabaseClient
+                // ۱. استعلام وضعیت واحد از جدول units
+                const { data: unitData, error: selectErr } = await supabaseClient
                     .from('units')
                     .select('*')
                     .eq('room_id', roomInput)
                     .maybeSingle();
 
-                if (error) throw error;
+                if (selectErr) throw selectErr;
 
                 if (authMode === 'register') {
                     if (unitData) {
-                        errEl.innerText = "⛔ این شماره واحد قبلاً ثبت شده است! از تب «ورود به واحد» استفاده کنید.";
+                        errEl.innerText = "⛔ این شماره واحد قبلاً ثبت شده! روی تب «ورود به واحد» کلیک کنید.";
                         errEl.classList.remove('hidden');
                     } else {
+                        // ۲. ثبت واحد جدید در دیتابیس
                         const { error: insErr } = await supabaseClient
                             .from('units')
                             .insert([{ room_id: roomInput, pin_code: pinInput, preset: 'full_suite' }]);
+                        
                         if (insErr) throw insErr;
+                        
+                        // ورود مستقیم به پنل بلافاصله پس از ساخت واحد
                         await unlockDashboard(roomInput, pinInput, 'full_suite');
                     }
                 } else {
+                    // حالت ورود به واحد (Login)
                     if (!unitData) {
-                        errEl.innerText = "❌ واحدی با این شماره پیدا نشد! ابتدا از تب «ثبت واحد جدید» آن را بسازید.";
+                        errEl.innerText = "❌ واحدی با این کد یافت نشد! ابتدا از تب «ثبت واحد جدید» آن را بسازید.";
                         errEl.classList.remove('hidden');
-                    } else if (unitData.pin_code !== pinInput) {
+                    } else if (String(unitData.pin_code) !== String(pinInput)) {
                         errEl.innerText = "⛔ رمز عبور (PIN) وارد شده برای این واحد اشتباه است!";
                         errEl.classList.remove('hidden');
                     } else {
@@ -474,26 +482,35 @@
                     }
                 }
             } catch (e) {
-                console.error(e);
-                errEl.innerText = "خطا در ارتباط با پایگاه داده! اتصال اینترنت را بررسی کنید.";
+                console.error("Supabase Auth Error:", e);
+                errEl.innerText = `⚠️ خطای دیتابیس: ${e.message || 'عدم دسترسی به جدول units'}`;
                 errEl.classList.remove('hidden');
+            } finally {
+                btn.disabled = false;
+                btn.innerText = authMode === 'login' ? "🚀 ورود به پنل واحد" : "✨ ساخت واحد جدید و ورود";
             }
-
-            btn.disabled = false;
-            switchAuthMode(authMode);
         }
 
         async function unlockDashboard(roomId, pinCode, preset) {
             CURRENT_ROOM = roomId;
-            currentPreset = preset;
-            document.getElementById('spacePresetSelect').value = currentPreset;
+            currentPreset = preset || 'full_suite';
+            
+            const presetSelect = document.getElementById('spacePresetSelect');
+            if (presetSelect) presetSelect.value = currentPreset;
+            
+            // ذخیره نشست در مرورگر برای ورود خودکار در دفعات بعدی
             localStorage.setItem('KHABGAH_SESSION_V1', JSON.stringify({ roomId, pinCode }));
             
+            // ۱. مخفی‌سازی قطعی صفحه قفل و نمایش نام واحد
             document.getElementById('currentRoomDisplay').innerText = `واحد ${roomId}`;
-            document.getElementById('authOverlay').classList.add('hidden');
+            const overlay = document.getElementById('authOverlay');
+            overlay.classList.add('hidden');
+            overlay.style.display = 'none';
             
-            await loadCloudData();
             showToast(`خوش آمدید! وارد پنل اختصاصی واحد ${roomId} شدید.`, "🔓");
+
+            // ۲. دریافت اطلاعات اختصاصی واحد از سرور
+            await loadCloudData();
         }
 
         function logoutRoom() {
@@ -502,7 +519,9 @@
             members = [];
             tasks = [];
             document.getElementById('authPinInput').value = '';
-            document.getElementById('authOverlay').classList.remove('hidden');
+            const overlay = document.getElementById('authOverlay');
+            overlay.classList.remove('hidden');
+            overlay.style.display = 'flex';
         }
 
         // =========================================================================
