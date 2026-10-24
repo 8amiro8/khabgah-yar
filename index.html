@@ -5,14 +5,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>خوابگاه‌یار هوشمند | سامانه اتوماسیون نظافت واحد</title>
     
-    <!-- فریم‌ورک Tailwind CSS برای طراحی ریسپانسیو و مدرن -->
+    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- فونت فارسی وزیرمتن -->
     <link href="https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/Vazirmatn-font-face.css" rel="stylesheet" type="text/css" />
     <!-- تقویم شمسی JalaliDatePicker -->
     <link rel="stylesheet" href="https://unpkg.com/@majidh1/jalalidatepicker/dist/jalalidatepicker.min.css">
     <script type="text/javascript" src="https://unpkg.com/@majidh1/jalalidatepicker/dist/jalalidatepicker.min.js"></script>
-    <!-- کتابخانه ارتباط با دیتابیس ابری Supabase -->
+    <!-- کتابخانه Supabase -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
     <style>
@@ -26,48 +26,29 @@
             padding-bottom: 95px;
             -webkit-tap-highlight-color: transparent;
         }
-
-        input, select, textarea {
-            font-size: 16px !important;
-        }
-
-        .app-card {
-            background: #1e293b;
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            width: 100%;
-            box-sizing: border-box;
-        }
-
-        jdp-container { 
-            z-index: 99999 !important; 
-            max-width: 94vw !important; 
-            font-family: 'Vazirmatn', sans-serif !important; 
-        }
+        input, select, textarea { font-size: 16px !important; }
+        .app-card { background: #1e293b; border: 1px solid rgba(255, 255, 255, 0.08); width: 100%; box-sizing: border-box; }
+        jdp-container { z-index: 99999 !important; max-width: 94vw !important; font-family: 'Vazirmatn', sans-serif !important; }
     </style>
 </head>
 <body class="min-h-screen">
 
-    <!-- 🔒 ۱. صفحه قفل و احراز هویت اختصاصی هر واحد (Authentication Overlay) -->
+    <!-- 🔒 صفحه قفل و احراز هویت اختصاصی واحد -->
     <div id="authOverlay" class="fixed inset-0 z-[100] bg-slate-950/95 backdrop-blur-md flex items-center justify-center p-4">
         <div class="app-card max-w-sm w-full p-6 rounded-3xl border border-indigo-500/40 shadow-2xl space-y-5 text-center">
-            <div class="w-16 h-16 rounded-2xl bg-indigo-600/20 border border-indigo-500/40 flex items-center justify-center text-3xl mx-auto shadow-inner">
-                🔐
-            </div>
+            <div class="w-16 h-16 rounded-2xl bg-indigo-600/20 border border-indigo-500/40 flex items-center justify-center text-3xl mx-auto shadow-inner">🔐</div>
             <div>
                 <h2 class="text-base sm:text-lg font-black text-white">ورود به پنل اختصاصی واحد</h2>
                 <p class="text-[11px] text-slate-400 mt-1">هر واحد فقط به برنامه نظافت و اعضای خود دسترسی دارد</p>
             </div>
-
-            <!-- تب تغییر حالت بین ورود به واحد و ساخت واحد جدید -->
             <div class="grid grid-cols-2 gap-1 bg-slate-900 p-1 rounded-xl text-xs font-bold">
                 <button type="button" onclick="switchAuthMode('login')" id="authTabLogin" class="py-2.5 rounded-lg bg-indigo-600 text-white transition">ورود به واحد</button>
                 <button type="button" onclick="switchAuthMode('register')" id="authTabRegister" class="py-2.5 rounded-lg text-slate-400 transition">ثبت واحد جدید</button>
             </div>
-
             <div class="space-y-3 text-right">
                 <div>
-                    <label class="text-xs text-slate-300 font-bold block mb-1">شماره یا کد واحد (انگلیسی یا عدد):</label>
-                    <input type="text" id="authRoomInput" placeholder="مثلاً: 402 یا unit-5" dir="ltr" class="w-full bg-slate-900 border border-slate-700 rounded-xl p-3 text-white text-center font-bold outline-none focus:border-indigo-500">
+                    <label class="text-xs text-slate-300 font-bold block mb-1">شماره یا کد واحد:</label>
+                    <input type="text" id="authRoomInput" placeholder="مثلاً: 402" dir="ltr" class="w-full bg-slate-900 border border-slate-700 rounded-xl p-3 text-white text-center font-bold outline-none focus:border-indigo-500">
                 </div>
                 <div>
                     <label class="text-xs text-slate-300 font-bold block mb-1">رمز عبور واحد (PIN):</label>
@@ -75,342 +56,156 @@
                 </div>
                 <p id="authErrorMsg" class="hidden text-xs text-rose-400 font-bold text-center bg-rose-500/10 p-2.5 rounded-xl border border-rose-500/30 leading-relaxed"></p>
             </div>
-
-            <button type="button" onclick="handleRoomAuth()" id="authSubmitBtn" class="w-full bg-indigo-600 hover:bg-indigo-500 active:bg-indigo-700 text-white font-black py-3.5 rounded-xl text-xs shadow-lg transition">
-                🚀 ورود به پنل واحد
-            </button>
+            <button type="button" onclick="handleRoomAuth()" id="authSubmitBtn" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-black py-3.5 rounded-xl text-xs shadow-lg transition">🚀 ورود به پنل واحد</button>
         </div>
     </div>
 
-    <!-- 🔔 ۲. نوار اعلان شناور (Toast) -->
+    <!-- 🔔 نوار اعلان Toast -->
     <div id="toast" class="fixed top-3 left-3 right-3 z-50 hidden max-w-md mx-auto">
-        <div id="toastInner" class="bg-slate-900 border border-indigo-500 text-white px-4 py-3 rounded-2xl shadow-2xl text-xs font-bold flex items-center gap-2.5 leading-relaxed">
+        <div id="toastInner" class="bg-slate-900 border border-indigo-500 text-white px-4 py-3 rounded-2xl shadow-2xl text-xs font-bold flex items-center gap-2.5">
             <span id="toastIcon" class="text-lg shrink-0">✨</span>
             <span id="toastText"></span>
         </div>
     </div>
 
-    <!-- 🧭 ۳. هدر اپلیکیشن (نمایش واحد فعال و دکمه خروج امن) -->
+    <!-- 🧭 هدر اپلیکیشن -->
     <header class="app-card sticky top-0 z-40 px-3.5 py-2.5 border-b border-slate-800">
         <div class="max-w-xl mx-auto flex justify-between items-center gap-2">
             <div class="flex items-center gap-2 min-w-0">
-                <div class="w-9 h-9 rounded-xl bg-indigo-600 flex items-center justify-center text-base shrink-0 shadow-md">
-                    🧹
-                </div>
+                <div class="w-9 h-9 rounded-xl bg-indigo-600 flex items-center justify-center text-base shrink-0 shadow-md">🧹</div>
                 <div class="min-w-0">
                     <div class="flex items-center gap-1.5">
                         <h1 class="font-black text-xs sm:text-sm text-white truncate">خوابگاه‌یار</h1>
                         <span id="currentRoomDisplay" class="text-[10px] bg-indigo-950 text-indigo-300 px-2 py-0.5 rounded-md font-bold border border-indigo-500/30">---</span>
-                        <button onclick="logoutRoom()" class="text-[10px] bg-rose-500/20 text-rose-300 border border-rose-500/30 px-2 py-0.5 rounded-md hover:bg-rose-500/30 transition font-bold">
-                            خروج 🔒
-                        </button>
+                        <button onclick="logoutRoom()" class="text-[10px] bg-rose-500/20 text-rose-300 border border-rose-500/30 px-2 py-0.5 rounded-md font-bold">خروج 🔒</button>
                     </div>
                     <select id="spacePresetSelect" onchange="changeSpacePreset()" class="bg-transparent text-[10px] text-slate-400 font-bold outline-none cursor-pointer truncate max-w-[190px] block mt-0.5">
-                        <option value="full_suite" class="bg-slate-900 text-white">🏠 واحد کامل (آشپزخانه، سرویس، اتاق)</option>
-                        <option value="single_room" class="bg-slate-900 text-white">🛏️ اتاق مشترک ۸-۱۲ نفره (فقط اتاق)</option>
+                        <option value="full_suite" class="bg-slate-900 text-white">🏠 واحد کامل</option>
+                        <option value="single_room" class="bg-slate-900 text-white">🛏️ اتاق مشترک</option>
                     </select>
                 </div>
             </div>
-
-            <button onclick="loadCloudData(true)" class="bg-slate-800 active:bg-slate-700 text-indigo-300 border border-slate-700 px-2.5 py-2 rounded-xl text-[11px] font-bold flex items-center gap-1 shrink-0 transition" title="همگام‌سازی مجدد با سرور">
-                <span>🔄</span>
-                <span class="hidden sm:inline">بروزرسانی</span>
-            </button>
+            <button onclick="loadCloudData(true)" class="bg-slate-800 text-indigo-300 border border-slate-700 px-2.5 py-2 rounded-xl text-[11px] font-bold flex items-center gap-1"><span>🔄</span><span>بروزرسانی</span></button>
         </div>
     </header>
 
-    <!-- 📱 ۴. کانتینر اصلی برنامه -->
+    <!-- کانتینر اصلی -->
     <main class="max-w-xl mx-auto px-3 pt-3 space-y-3.5">
-
-        <!-- ================= تب ۱: برنامه نظافت ================= -->
+        <!-- تب ۱: برنامه نظافت -->
         <section id="view-board" class="space-y-3.5">
-
-            <!-- وضعیت نوبت اعضا در یک نگاه -->
             <div class="app-card p-3.5 rounded-2xl">
                 <div class="flex justify-between items-center mb-2.5">
-                    <h2 class="font-bold text-xs text-white flex items-center gap-1.5">
-                        <span>⏳</span> وضعیت نوبت اعضای واحد (سیکل ۹ روزه)
-                    </h2>
+                    <h2 class="font-bold text-xs text-white"><span>⏳</span> وضعیت نوبت اعضای واحد</h2>
                     <span class="text-[10px] bg-rose-500/20 text-rose-300 px-2 py-0.5 rounded-md font-bold">قرمز = نوبت رسیده</span>
                 </div>
                 <div id="cycleBar" class="grid grid-cols-2 sm:grid-cols-3 gap-2"></div>
             </div>
 
-            <!-- نوبت‌های ثبت‌شده در صف انجام -->
             <div class="app-card p-3.5 rounded-2xl border-t-4 border-t-indigo-500 space-y-2.5">
                 <div class="flex justify-between items-center">
-                    <div>
-                        <h3 class="font-bold text-sm text-white">📌 نوبت‌های ثبت‌شده در صف انجام</h3>
-                        <p class="text-[10px] text-slate-400">همگام‌سازی زنده بین تمام اعضای واحد</p>
-                    </div>
+                    <h3 class="font-bold text-sm text-white">📌 نوبت‌های ثبت‌شده در صف انجام</h3>
                     <span id="todoCount" class="text-xs bg-indigo-500/20 text-indigo-300 px-2.5 py-0.5 rounded-full font-bold">0</span>
                 </div>
                 <div id="todoContainer" class="space-y-2.5"></div>
             </div>
 
-            <!-- بخش کشویی ثبت زمان خالی جدید -->
             <div class="app-card rounded-2xl overflow-hidden border border-indigo-500/30">
-                <button type="button" onclick="toggleDrawer('newSlotDrawer', 'newSlotDrawerIcon')" class="w-full p-3.5 bg-indigo-950/30 hover:bg-indigo-950/50 flex justify-between items-center text-right transition">
+                <button type="button" onclick="toggleDrawer('newSlotDrawer', 'newSlotDrawerIcon')" class="w-full p-3.5 bg-indigo-950/30 flex justify-between items-center text-right">
                     <div class="flex items-center gap-2">
-                        <span class="w-7 h-7 rounded-lg bg-indigo-600 text-white font-black flex items-center justify-center text-base shadow">+</span>
-                        <div>
-                            <span class="font-bold text-xs md:text-sm text-white block">ثبت زمان خالی جدید برای نظافت</span>
-                            <span class="text-[10px] text-indigo-300">برای باز شدن فرم انتخاب روز و ساعت لمس کنید</span>
-                        </div>
+                        <span class="w-7 h-7 rounded-lg bg-indigo-600 text-white font-black flex items-center justify-center text-base">+</span>
+                        <span class="font-bold text-xs md:text-sm text-white">ثبت زمان خالی جدید برای نظافت</span>
                     </div>
                     <span id="newSlotDrawerIcon" class="text-indigo-300 text-xs font-bold">▼ باز کردن</span>
                 </button>
-
                 <div id="newSlotDrawer" class="hidden p-4 border-t border-slate-800 space-y-3.5">
                     <div>
                         <label class="text-xs text-slate-300 font-bold block mb-1">۱. انتخاب نام عضو:</label>
                         <select id="memberSelect" onchange="suggestNextAreaForMember()" class="w-full bg-slate-900 border border-slate-700 rounded-xl p-2.5 text-white outline-none"></select>
                     </div>
-
                     <div class="bg-slate-900/80 p-3 rounded-xl border border-slate-800 space-y-2">
-                        <label class="text-xs text-indigo-300 font-bold block">۲. محل نظافت (پیشنهاد هوشمند طبق نوبت):</label>
-                        <select id="areaSelect" onchange="checkCoopEligibility()" class="w-full bg-slate-950 border border-indigo-500/40 rounded-xl p-2.5 font-bold text-emerald-400 outline-none"></select>
-
-                        <div id="coopPartnerBox" class="pt-2 border-t border-slate-800/80">
-                            <label class="text-[11px] text-amber-300 font-bold block mb-1">👥 همیار نظافت (اختیاری - تمیزکاری دو نفره):</label>
-                            <select id="partnerSelect" class="w-full bg-slate-950 border border-slate-700 rounded-xl p-2 text-slate-300 outline-none"></select>
-                        </div>
+                        <label class="text-xs text-indigo-300 font-bold block">۲. محل نظافت:</label>
+                        <select id="areaSelect" class="w-full bg-slate-950 border border-indigo-500/40 rounded-xl p-2.5 font-bold text-emerald-400 outline-none"></select>
                     </div>
-
-                    <div class="space-y-1.5">
-                        <label class="text-xs text-slate-300 font-bold block">۳. انتخاب سریع از پیشنهادهای آماده:</label>
-                        <div class="grid grid-cols-2 gap-1.5 text-xs">
-                            <button type="button" onclick="applyQuickSlot('1405/08/01', '12:00', '14:00')" class="bg-slate-900 active:bg-indigo-600/30 border border-slate-700 p-2 rounded-xl text-slate-200 font-bold">⚡ پنج‌شنبه ۱۲ تا ۱۴</button>
-                            <button type="button" onclick="applyQuickSlot('1405/08/01', '17:00', '19:00')" class="bg-slate-900 active:bg-indigo-600/30 border border-slate-700 p-2 rounded-xl text-slate-200 font-bold">⚡ پنج‌شنبه ۱۷ تا ۱۹</button>
-                        </div>
-                    </div>
-
                     <div class="space-y-2.5 bg-slate-900/80 p-3 rounded-xl border border-slate-800">
-                        <label class="text-xs text-slate-300 font-bold block">یا تنظیم دقیق روز و ساعت (۲۴ ساعته):</label>
-                        <input type="text" id="dateInput" data-jdp placeholder="📅 لمس برای انتخاب تاریخ از تقویم..." readonly class="w-full bg-slate-950 border border-slate-700 rounded-xl p-2.5 text-white text-center font-bold cursor-pointer outline-none">
-                        
-                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                            <div>
-                                <span class="text-[11px] text-slate-400 block mb-1">از ساعت:</span>
-                                <select id="startTimeInput" onchange="validate24HourRange()" class="w-full bg-slate-950 border border-slate-700 rounded-xl p-2 font-bold text-white text-center outline-none"></select>
-                            </div>
-                            <div>
-                                <span class="text-[11px] text-slate-400 block mb-1">تا ساعت:</span>
-                                <select id="endTimeInput" onchange="validate24HourRange()" class="w-full bg-slate-950 border border-slate-700 rounded-xl p-2 font-bold text-white text-center outline-none"></select>
-                            </div>
+                        <label class="text-xs text-slate-300 font-bold block">تاریخ و ساعت (۲۴ ساعته):</label>
+                        <input type="text" id="dateInput" data-jdp placeholder="📅 انتخاب تاریخ..." readonly class="w-full bg-slate-950 border border-slate-700 rounded-xl p-2.5 text-white text-center font-bold outline-none cursor-pointer">
+                        <div class="grid grid-cols-2 gap-2">
+                            <select id="startTimeInput" class="w-full bg-slate-950 border border-slate-700 rounded-xl p-2 font-bold text-white text-center outline-none"></select>
+                            <select id="endTimeInput" class="w-full bg-slate-950 border border-slate-700 rounded-xl p-2 font-bold text-white text-center outline-none"></select>
                         </div>
-                        <p id="dateTimeError" class="hidden text-[11px] text-rose-400 font-bold"></p>
                     </div>
-
-                    <button onclick="handleTaskSubmission()" id="submitTaskBtn" class="w-full bg-indigo-600 active:bg-indigo-700 text-white font-black py-3 rounded-xl text-xs md:text-sm shadow-lg transition">
-                        🚀 ثبت در جدول نوبت‌های واحد
-                    </button>
+                    <button onclick="handleTaskSubmission()" class="w-full bg-indigo-600 text-white font-black py-3 rounded-xl text-xs shadow-lg">🚀 ثبت در جدول نوبت‌ها</button>
                 </div>
             </div>
         </section>
 
-        <!-- ================= تب ۲: اعضا و اتاق‌ها ================= -->
+        <!-- تب ۲: اعضا و اتاق‌ها -->
         <section id="view-members" class="hidden space-y-3.5">
             <div class="app-card rounded-2xl overflow-hidden border border-indigo-500/30">
                 <button type="button" onclick="toggleDrawer('addMemberDrawer', 'addMemberDrawerIcon')" class="w-full p-3.5 bg-indigo-950/30 flex justify-between items-center text-right">
                     <div class="flex items-center gap-2">
                         <span class="w-7 h-7 rounded-lg bg-indigo-600 text-white font-black flex items-center justify-center text-base">+</span>
-                        <div>
-                            <span class="font-bold text-xs md:text-sm text-white block">افزودن عضو جدید و تعیین محل خواب</span>
-                            <span class="text-[10px] text-indigo-300">حداکثر ۴ نفر در هر اتاق یا پذیرایی</span>
-                        </div>
+                        <span class="font-bold text-xs md:text-sm text-white">افزودن عضو جدید به واحد</span>
                     </div>
                     <span id="addMemberDrawerIcon" class="text-indigo-300 text-xs font-bold">▼ باز کردن</span>
                 </button>
-
                 <div id="addMemberDrawer" class="hidden p-4 border-t border-slate-800 space-y-3.5">
-                    <div class="space-y-3">
-                        <div>
-                            <label class="text-xs text-slate-300 font-bold block mb-1">نام و نام خانوادگی:</label>
-                            <input type="text" id="memberNameInput" placeholder="مثلاً: رضا محمدی" class="w-full bg-slate-900 border border-slate-700 rounded-xl p-2.5 text-white outline-none">
-                            <p id="memberNameError" class="hidden text-[11px] text-rose-400 font-bold mt-1">⚠️ لطفاً نام عضو را وارد کنید!</p>
-                        </div>
-
-                        <div class="space-y-1.5">
-                            <label class="text-xs text-slate-300 font-bold block">انتخاب محل خواب (ظرفیت هر بخش: ۴ نفر):</label>
-                            <div id="sleepZoneButtonsGrid" class="grid grid-cols-2 gap-2 text-xs"></div>
-                            <p id="zoneCapacityError" class="hidden text-[11px] text-rose-400 font-bold mt-1 leading-relaxed"></p>
-                        </div>
-
-                        <button onclick="addMember()" id="addMemberBtn" class="w-full bg-indigo-600 active:bg-indigo-700 text-white font-bold py-3 rounded-xl text-xs transition">
-                            + ثبت عضو در واحد
-                        </button>
+                    <div>
+                        <label class="text-xs text-slate-300 font-bold block mb-1">نام و نام خانوادگی:</label>
+                        <input type="text" id="memberNameInput" placeholder="مثلاً: علی رضایی" class="w-full bg-slate-900 border border-slate-700 rounded-xl p-2.5 text-white outline-none">
                     </div>
-
-                    <div class="bg-slate-900 p-3 rounded-xl border border-slate-800 space-y-2">
-                        <span class="text-xs font-bold text-indigo-300 block">⚡ ثبت سریع چند نفر با هم:</span>
-                        <textarea id="bulkMembersInput" rows="2" placeholder="اسامی با کاما: علی حسینی، مهدی کریمی..." class="w-full bg-slate-950 border border-slate-700 rounded-xl p-2 text-white outline-none"></textarea>
-                        <button onclick="addBulkMembers()" class="w-full bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold py-2.5 rounded-xl border border-slate-700 transition">
-                            ثبت یک‌جای اسامی در واحد
-                        </button>
+                    <div class="space-y-1.5">
+                        <label class="text-xs text-slate-300 font-bold block">محل خواب:</label>
+                        <div id="sleepZoneButtonsGrid" class="grid grid-cols-3 gap-2 text-xs"></div>
                     </div>
+                    <button onclick="addMember()" class="w-full bg-indigo-600 text-white font-bold py-3 rounded-xl text-xs">+ ثبت عضو در واحد</button>
                 </div>
             </div>
 
-            <!-- تعیین ارشدهای واحد -->
-            <div class="app-card p-3.5 rounded-2xl border border-amber-500/30 space-y-2.5">
-                <h3 class="font-bold text-xs text-amber-300 flex items-center gap-1.5">
-                    <span>👑</span> تعیین ارشدهای واحد (حداکثر ۲ نفر)
-                </h3>
-                <div class="grid grid-cols-2 gap-2">
-                    <div>
-                        <span class="text-[10px] text-slate-400 block mb-1">ارشد اول:</span>
-                        <select id="senior1Select" onchange="updateSeniorsFromSelects()" class="w-full bg-slate-900 border border-slate-700 rounded-xl p-2 text-amber-300 font-bold outline-none"></select>
-                    </div>
-                    <div>
-                        <span class="text-[10px] text-slate-400 block mb-1">ارشد دوم:</span>
-                        <select id="senior2Select" onchange="updateSeniorsFromSelects()" class="w-full bg-slate-900 border border-slate-700 rounded-xl p-2 text-amber-300 font-bold outline-none"></select>
-                    </div>
-                </div>
-            </div>
-
-            <!-- لیست اعضای واحد با قابلیت حذف و تغییر اتاق -->
             <div class="app-card p-3.5 rounded-2xl space-y-2.5">
-                <div class="flex justify-between items-center">
-                    <h3 class="font-bold text-xs md:text-sm text-white">👥 اعضای این واحد (<span id="membersCountBadge">0</span>/12 نفر)</h3>
-                    <span class="text-[10px] text-slate-400">امکان تغییر اتاق یا حذف عضو</span>
-                </div>
-                <div id="membersGrid" class="grid grid-cols-1 sm:grid-cols-2 gap-2"></div>
+                <h3 class="font-bold text-xs md:text-sm text-white">👥 اعضای این واحد (<span id="membersCountBadge">0</span> نفر)</h3>
+                <div id="membersGrid" class="grid grid-cols-2 gap-2"></div>
             </div>
         </section>
 
-        <!-- ================= تب ۳: امتیاز و پاداش ================= -->
+        <!-- تب ۳: امتیاز و پاداش -->
         <section id="view-ranking" class="hidden space-y-4">
             <div class="app-card p-3.5 rounded-2xl border-t-4 border-t-emerald-500 space-y-3">
-                <div class="flex justify-between items-center">
-                    <div>
-                        <h3 class="font-bold text-sm text-white">⭐ ثبت امتیاز کیفیت برای نظافت‌های انجام‌شده</h3>
-                        <p class="text-[10px] text-slate-400">ابتدا ستاره (۱ تا ۵) را انتخاب کرده و دکمه ثبت نهایی را بزنید</p>
-                    </div>
-                    <span id="doneCount" class="text-xs bg-emerald-500/20 text-emerald-300 px-2.5 py-0.5 rounded-full font-bold">0</span>
-                </div>
+                <h3 class="font-bold text-sm text-white">⭐ تایید و ثبت امتیاز نظافت‌ها</h3>
                 <div id="doneContainer" class="space-y-2.5"></div>
             </div>
-
             <div class="app-card p-3.5 rounded-2xl border-t-4 border-t-amber-500 space-y-3">
-                <div>
-                    <h2 class="font-bold text-sm text-white">🏆 جدول رتبه‌بندی و دریافت پاداش معافیت</h2>
-                    <p class="text-[11px] text-slate-400 mt-0.5">با کسب ۵۰ امتیاز، می‌توانید ۱ دوره کامل از نظافت معاف شوید!</p>
-                </div>
+                <h2 class="font-bold text-sm text-white">🏆 جدول رتبه‌بندی واحد</h2>
                 <div id="rankingList" class="space-y-2.5"></div>
             </div>
         </section>
     </main>
 
-    <!-- 🔽 ۵. منوی پایین موبایل (Bottom Navigation) -->
+    <!-- منوی پایین موبایل -->
     <nav class="fixed bottom-0 left-0 right-0 bg-slate-900/95 backdrop-blur-md border-t border-slate-800 px-3 py-2 z-40">
         <div class="max-w-xl mx-auto grid grid-cols-3 gap-2">
-            <button onclick="switchTab('board')" id="tab-board" class="py-2 rounded-xl bg-indigo-600 text-white text-xs font-bold flex flex-col items-center gap-0.5 transition shadow-lg">
-                <span class="text-base">📋</span>
-                <span>نوبت‌های نظافت</span>
-            </button>
-            <button onclick="switchTab('members')" id="tab-members" class="py-2 rounded-xl text-slate-400 text-xs font-bold flex flex-col items-center gap-0.5 transition">
-                <span class="text-base">👥</span>
-                <span>اعضا و اتاق‌ها</span>
-            </button>
-            <button onclick="switchTab('ranking')" id="tab-ranking" class="py-2 rounded-xl text-slate-400 text-xs font-bold flex flex-col items-center gap-0.5 transition">
-                <span class="text-base">🏆</span>
-                <span>امتیاز و پاداش</span>
-            </button>
+            <button onclick="switchTab('board')" id="tab-board" class="py-2 rounded-xl bg-indigo-600 text-white text-xs font-bold flex flex-col items-center gap-0.5 transition shadow-lg"><span>📋</span><span>نوبت‌ها</span></button>
+            <button onclick="switchTab('members')" id="tab-members" class="py-2 rounded-xl text-slate-400 text-xs font-bold flex flex-col items-center gap-0.5 transition"><span>👥</span><span>اعضا</span></button>
+            <button onclick="switchTab('ranking')" id="tab-ranking" class="py-2 rounded-xl text-slate-400 text-xs font-bold flex flex-col items-center gap-0.5 transition"><span>🏆</span><span>امتیازات</span></button>
         </div>
     </nav>
 
-    <!-- 📸 ۶. مودال تحویل کار و آپلود عکس -->
-    <div id="verifyModal" class="fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-sm hidden flex items-center justify-center p-3.5 overflow-y-auto">
-        <div class="app-card bg-slate-900 w-full max-w-md rounded-3xl p-4 space-y-3.5 my-6">
-            <div class="flex justify-between items-center border-b border-slate-700 pb-2.5">
-                <div>
-                    <h3 class="font-bold text-sm text-white">📸 تحویل کار و آپلود عکس</h3>
-                    <p class="text-[10px] text-indigo-400 font-bold mt-0.5">کسب +۱۰ امتیاز پایه پس از تحویل</p>
-                </div>
-                <button onclick="closeVerifyModal()" class="bg-slate-800 text-slate-200 text-xs font-bold px-3 py-1.5 rounded-xl border border-slate-600">🔙 بازگشت</button>
-            </div>
-            <div class="grid grid-cols-2 gap-2.5">
-                <div class="p-2 rounded-2xl border border-slate-700 bg-slate-950/60 space-y-1">
-                    <div class="relative h-28 rounded-xl overflow-hidden border-2 border-dashed border-slate-700 flex flex-col items-center justify-center text-center">
-                        <label class="cursor-pointer w-full h-full flex flex-col items-center justify-center p-2">
-                            <input type="file" id="beforeInput" accept="image/*" capture="environment" class="hidden" onchange="handlePhoto(event, 'before')">
-                            <span class="text-xl">🏚️</span><span class="text-[11px] font-bold text-slate-300 mt-1">۱. عکس قبل</span>
-                        </label>
-                        <img id="beforePreview" class="hidden absolute inset-0 w-full h-full object-cover" />
-                        <button type="button" id="beforeClearBtn" onclick="clearSelectedPhoto('before')" class="hidden absolute top-1 right-1 bg-rose-600 text-white text-[10px] font-bold px-2 py-0.5 rounded-lg shadow">🔄 تغییر</button>
-                    </div>
-                </div>
-                <div class="p-2 rounded-2xl border border-slate-700 bg-slate-950/60 space-y-1">
-                    <div class="relative h-28 rounded-xl overflow-hidden border-2 border-dashed border-slate-700 flex flex-col items-center justify-center text-center">
-                        <label class="cursor-pointer w-full h-full flex flex-col items-center justify-center p-2">
-                            <input type="file" id="afterInput" accept="image/*" capture="environment" class="hidden" onchange="handlePhoto(event, 'after')">
-                            <span class="text-xl">✨</span><span class="text-[11px] font-bold text-slate-300 mt-1">۲. عکس بعد</span>
-                        </label>
-                        <img id="afterPreview" class="hidden absolute inset-0 w-full h-full object-cover" />
-                        <button type="button" id="afterClearBtn" onclick="clearSelectedPhoto('after')" class="hidden absolute top-1 right-1 bg-rose-600 text-white text-[10px] font-bold px-2 py-0.5 rounded-lg shadow">🔄 تغییر</button>
-                    </div>
-                </div>
-            </div>
-            <div class="bg-slate-950 p-3 rounded-2xl border border-slate-800 space-y-2">
-                <span class="text-xs font-bold text-emerald-400 block">✅ چک‌لیست تمیزی بخش:</span>
-                <div id="checklistContainer" class="space-y-1.5 text-xs text-slate-200"></div>
-            </div>
-            <div class="grid grid-cols-3 gap-2">
-                <button type="button" onclick="closeVerifyModal()" class="col-span-1 bg-slate-800 text-slate-300 font-bold py-3 rounded-xl text-xs">🔙 بازگشت</button>
-                <button type="button" onclick="submitVerification()" class="col-span-2 bg-emerald-600 text-white font-black py-3 rounded-xl text-xs">ثبت نهایی نظافت ✔️</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- 🤝 ۷. مودال داوطلب شدن و جایگزینی -->
-    <div id="takeoverModal" class="fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-sm hidden flex items-center justify-center p-3.5">
-        <div class="app-card bg-slate-900 w-full max-w-md rounded-3xl p-4 space-y-4">
-            <div class="flex justify-between items-center">
-                <h3 class="font-bold text-sm text-white">🤝 داوطلب شدن به جای هم‌اتاقی</h3>
-                <button onclick="document.getElementById('takeoverModal').classList.add('hidden')" class="text-xs bg-slate-800 px-2.5 py-1 rounded-lg">🔙 بازگشت</button>
-            </div>
-            <p class="text-xs text-slate-300 leading-relaxed">چه کسی داوطلب انجام این نوبت نظافت است؟ (+۱۵ امتیاز پاداش همیاری)</p>
-            <select id="volunteerSelect" class="w-full bg-slate-950 border border-slate-700 rounded-xl p-2.5 text-white outline-none"></select>
-            <button onclick="confirmTakeover()" class="w-full bg-amber-500 text-slate-950 font-black py-3 rounded-xl text-xs">ثبت جایگزینی (+۱۵ امتیاز پاداش) 🚀</button>
-        </div>
-    </div>
-
     <script>
-        // =========================================================================
-        // ۱. تنظیمات اتصال به پایگاه داده ابری Supabase
-        // =========================================================================
         const SUPABASE_URL = 'https://faeysshpitmqbqpijtyi.supabase.co'; 
         const SUPABASE_KEY = 'sb_publishable_ak3uAyt9OxzspXyblRZgsw_tLJpiiC-'; 
         const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-        // متغیرهای وضعیت واحد و احراز هویت
         let CURRENT_ROOM = null;
         let authMode = 'login';
-
-        const SPACE_PRESETS = {
-            full_suite: { areas: ["آشپزخانه", "دستشویی", "حمام", "پذیرایی و میزها", "اتاق خواب"], coopAreas: ["آشپزخانه", "پذیرایی و میزها", "اتاق خواب"] },
-            single_room: { areas: ["کل فضای اتاق و فرش‌ها", "میزهای مطالعه و غذاخوری", "کمدها و سطل زباله"], coopAreas: ["کل فضای اتاق و فرش‌ها"] }
-        };
-
         let currentPreset = 'full_suite';
-        const DEFAULT_CYCLE_DAYS = 9;
-        const MAX_ZONE_CAPACITY = 4;
         const VALID_ZONES = ["اتاق ۱", "اتاق ۲", "پذیرایی"];
         let selectedSleepZone = "اتاق ۱";
 
         let members = [];
         let tasks = [];
 
-        let activeVerifyId = null;
-        let activeTakeoverId = null;
-        let verifyPhotosState = { before: false, after: false };
-
         jalaliDatepicker.startWatch();
 
-        // =========================================================================
-        // ۲. سیستم احراز هویت واحد (Login / Register با PIN Code)
-        // =========================================================================
         function switchAuthMode(mode) {
             authMode = mode;
             document.getElementById('authErrorMsg').classList.add('hidden');
@@ -429,8 +224,6 @@
             const roomInput = document.getElementById('authRoomInput').value.trim().toLowerCase();
             const pinInput = document.getElementById('authPinInput').value.trim();
             const errEl = document.getElementById('authErrorMsg');
-            const btn = document.getElementById('authSubmitBtn');
-
             errEl.classList.add('hidden');
 
             if (!roomInput || !pinInput) {
@@ -439,342 +232,117 @@
                 return;
             }
 
-            btn.disabled = true;
-            btn.innerText = "⏳ در حال بررسی امنیتی...";
-
             try {
-                const { data: unitData, error: selectErr } = await supabaseClient
-                    .from('units')
-                    .select('*')
-                    .eq('room_id', roomInput)
-                    .maybeSingle();
-
-                if (selectErr) throw selectErr;
+                const { data: unitData, error } = await supabaseClient.from('units').select('*').eq('room_id', roomInput).maybeSingle();
+                if (error) throw error;
 
                 if (authMode === 'register') {
                     if (unitData) {
-                        errEl.innerText = "⛔ این شماره واحد قبلاً ثبت شده! روی تب «ورود به واحد» کلیک کنید.";
+                        errEl.innerText = "⛔ این شماره واحد قبلاً ثبت شده است!";
                         errEl.classList.remove('hidden');
                     } else {
-                        const { error: insErr } = await supabaseClient
-                            .from('units')
-                            .insert([{ room_id: roomInput, pin_code: pinInput, preset: 'full_suite' }]);
-                        
-                        if (insErr) throw insErr;
+                        await supabaseClient.from('units').insert([{ room_id: roomInput, pin_code: pinInput, preset: 'full_suite' }]);
                         await unlockDashboard(roomInput, pinInput, 'full_suite');
                     }
                 } else {
-                    if (!unitData) {
-                        errEl.innerText = "❌ واحدی با این کد یافت نشد! ابتدا از تب «ثبت واحد جدید» آن را بسازید.";
-                        errEl.classList.remove('hidden');
-                    } else if (String(unitData.pin_code) !== String(pinInput)) {
-                        errEl.innerText = "⛔ رمز عبور (PIN) وارد شده برای این واحد اشتباه است!";
+                    if (!unitData || String(unitData.pin_code) !== String(pinInput)) {
+                        errEl.innerText = "⛔ شماره واحد یا رمز عبور اشتباه است!";
                         errEl.classList.remove('hidden');
                     } else {
                         await unlockDashboard(roomInput, pinInput, unitData.preset || 'full_suite');
                     }
                 }
             } catch (e) {
-                console.error("Supabase Auth Error:", e);
-                errEl.innerText = `⚠️ خطای دیتابیس: ${e.message || 'عدم دسترسی به جدول units'}`;
+                errEl.innerText = `خطای دیتابیس: ${e.message}`;
                 errEl.classList.remove('hidden');
-            } finally {
-                btn.disabled = false;
-                btn.innerText = authMode === 'login' ? "🚀 ورود به پنل واحد" : "✨ ساخت واحد جدید و ورود";
             }
         }
 
         async function unlockDashboard(roomId, pinCode, preset) {
             CURRENT_ROOM = roomId;
-            currentPreset = preset || 'full_suite';
-            
-            const presetSelect = document.getElementById('spacePresetSelect');
-            if (presetSelect) presetSelect.value = currentPreset;
-            
+            currentPreset = preset;
             localStorage.setItem('KHABGAH_SESSION_V1', JSON.stringify({ roomId, pinCode }));
-            
             document.getElementById('currentRoomDisplay').innerText = `واحد ${roomId}`;
-            const overlay = document.getElementById('authOverlay');
-            overlay.classList.add('hidden');
-            overlay.style.display = 'none';
-            
-            showToast(`خوش آمدید! وارد پنل اختصاصی واحد ${roomId} شدید.`, "🔓");
+            document.getElementById('authOverlay').style.display = 'none';
             await loadCloudData();
         }
 
         function logoutRoom() {
             localStorage.removeItem('KHABGAH_SESSION_V1');
-            CURRENT_ROOM = null;
-            members = [];
-            tasks = [];
-            document.getElementById('authPinInput').value = '';
-            const overlay = document.getElementById('authOverlay');
-            overlay.classList.remove('hidden');
-            overlay.style.display = 'flex';
+            window.location.reload();
         }
 
-        // =========================================================================
-        // ۳. دریافت و همگام‌سازی اطلاعات اختصاصی هر واحد با Supabase
-        // =========================================================================
-        async function loadCloudData(showSyncToast = false) {
+        async function loadCloudData(showToastMsg = false) {
             if (!CURRENT_ROOM) return;
-            try {
-                const { data: memData, error: memErr } = await supabaseClient
-                    .from('members')
-                    .select('*')
-                    .eq('room_id', CURRENT_ROOM)
-                    .order('id', { ascending: true });
+            const { data: memData } = await supabaseClient.from('members').select('*').eq('room_id', CURRENT_ROOM);
+            members = (memData || []).map(m => ({ id: m.id, name: m.name, sleepZone: m.sleep_zone, points: m.points || 0, lastAreaIdx: m.last_area_idx || 0 }));
 
-                if (memErr) throw memErr;
+            const { data: taskData } = await supabaseClient.from('tasks').select('*').eq('room_id', CURRENT_ROOM);
+            tasks = (taskData || []).map(t => ({ id: t.id, memberId: t.member_id, memberName: t.member_name, area: t.area, date: t.date, start: t.start_time, end: t.end_time, status: t.status }));
 
-                members = (memData || []).map(m => ({
-                    id: m.id,
-                    name: m.name,
-                    sleepZone: m.sleep_zone,
-                    isSenior: m.is_senior || false,
-                    daysAgo: m.days_ago || 0,
-                    cycleLimit: m.cycle_limit || 9,
-                    lastAreaIdx: m.last_area_idx || 0,
-                    points: m.points || 0
-                }));
-
-                const { data: taskData, error: taskErr } = await supabaseClient
-                    .from('tasks')
-                    .select('*')
-                    .eq('room_id', CURRENT_ROOM)
-                    .order('id', { ascending: true });
-
-                if (taskErr) throw taskErr;
-
-                tasks = (taskData || []).map(t => ({
-                    id: t.id,
-                    memberId: t.member_id,
-                    memberName: t.member_name,
-                    sleepZone: t.sleep_zone,
-                    partnerName: t.partner_name,
-                    area: t.area,
-                    date: t.date,
-                    start: t.start_time,
-                    end: t.end_time,
-                    status: t.status,
-                    score: t.score || 0,
-                    pendingStar: t.pending_star || 0,
-                    hasVoted: t.has_voted || false
-                }));
-
-                renderAll();
-                if (showSyncToast) showToast("اطلاعات واحد با سرور همگام‌سازی شد!", "🔄");
-            } catch (e) {
-                console.error("خطا در دریافت اطلاعات واحد:", e);
-                showToast(`خطا در دریافت اطلاعات: ${e.message}`, "⚠️");
-            }
+            renderAll();
+            if (showToastMsg) showToast("اطلاعات بروزرسانی شد!", "🔄");
         }
 
-        // =========================================================================
-        // ۴. مدیریت اعضا، اتاق‌ها و ارشدها (با مدیریت خطای کامل)
-        // =========================================================================
-        function getZoneCount(zoneName, excludeMemberId = null) {
-            return members.filter(m => m.sleepZone === zoneName && m.id !== excludeMemberId).length;
+        function renderZoneButtons() {
+            document.getElementById('sleepZoneButtonsGrid').innerHTML = VALID_ZONES.map(z => `
+                <button type="button" onclick="selectedSleepZone='${z}'; renderZoneButtons();" class="p-2 rounded-xl border text-xs font-bold ${selectedSleepZone===z?'bg-indigo-600 text-white border-indigo-400':'bg-slate-900 text-slate-300 border-slate-700'}">${z}</button>
+            `).join('');
         }
 
-        function renderZoneCapacityButtons() {
-            const container = document.getElementById('sleepZoneButtonsGrid');
-            if (!container) return;
-
-            container.innerHTML = VALID_ZONES.map(zone => {
-                const count = getZoneCount(zone);
-                const isFull = count >= MAX_ZONE_CAPACITY;
-                const isSelected = selectedSleepZone === zone;
-
-                return `
-                    <button type="button" onclick="selectSleepZone('${zone}')" 
-                        class="p-2.5 rounded-xl border text-right transition flex justify-between items-center ${isSelected ? 'bg-indigo-600 border-indigo-400 text-white font-bold shadow-md' : (isFull ? 'bg-rose-950/30 border-rose-500/40 text-rose-300' : 'bg-slate-900 border-slate-700 text-slate-300')}">
-                        <span>${zone === 'پذیرایی' ? '🛋️' : '🛏️'} ${zone}</span>
-                        <span class="text-[10px] px-1.5 py-0.5 rounded ${isFull ? 'bg-rose-600 text-white font-black' : 'bg-slate-800 text-slate-300'}">${count}/${MAX_ZONE_CAPACITY}</span>
-                    </button>
-                `;
-            }).join('');
-        }
-
-        function selectSleepZone(zone) {
-            const errEl = document.getElementById('zoneCapacityError');
-            if (getZoneCount(zone) >= MAX_ZONE_CAPACITY) {
-                errEl.innerText = `⛔ ظرفیت «${zone}» تکمیل است (حداکثر ۴ نفر)!`;
-                errEl.classList.remove('hidden');
-                return;
-            }
-            errEl.classList.add('hidden');
-            selectedSleepZone = zone;
-            renderZoneCapacityButtons();
-        }
-
-        // تابع اصلاح‌شده افزودن عضو با قابلیت هندلینگ کامل خطا
+        // تابع اصلاح‌شده افزودن عضو (بدون ارسال دستی id تا Supabase خودش بسازه)
         async function addMember() {
-            const inp = document.getElementById('memberNameInput');
-            const name = inp.value.trim();
-            const errEl = document.getElementById('memberNameError');
+            const name = document.getElementById('memberNameInput').value.trim();
+            if (!name) { showToast("نام عضو را وارد کنید!", "⚠️"); return; }
             
-            if (!name) {
-                if (errEl) errEl.classList.remove('hidden');
-                showToast("لطفاً نام عضو را وارد کنید!", "⚠️");
-                return;
-            }
-            if (errEl) errEl.classList.add('hidden');
-
-            if (getZoneCount(selectedSleepZone) >= MAX_ZONE_CAPACITY) {
-                showToast(`⛔ ظرفیت ${selectedSleepZone} تکمیل است (حداکثر ۴ نفر)!`, "⚠️");
-                return;
-            }
-
             const newMember = {
                 room_id: CURRENT_ROOM,
                 name: name,
                 sleep_zone: selectedSleepZone,
-                is_senior: false,
                 days_ago: 0,
-                cycle_limit: DEFAULT_CYCLE_DAYS,
-                last_area_idx: members.length,
-                points: 0
+                points: 0,
+                last_area_idx: members.length
             };
 
             const { error } = await supabaseClient.from('members').insert([newMember]);
-
             if (error) {
-                console.error("خطای دیتابیس در ثبت عضو:", error);
-                showToast(`❌ خطا در ثبت عضو: ${error.message}`, "⚠️");
+                showToast(`خطا در ثبت عضو: ${error.message}`, "⚠️");
                 return;
             }
 
-            inp.value = "";
+            document.getElementById('memberNameInput').value = "";
             await loadCloudData();
-            showToast(`${name} با موفقیت به واحد اضافه شد!`, "👤");
+            showToast("عضو جدید اضافه شد!", "👤");
         }
 
-        // تابع اصلاح‌شده ثبت گروهی اعضا
-        async function addBulkMembers() {
-            const raw = document.getElementById('bulkMembersInput').value.trim();
-            if (!raw) return;
-            const list = raw.split(/[،,\-\n]+/).map(s => s.trim()).filter(Boolean);
-            
-            const payload = [];
-            let tempZones = {
-                "اتاق ۱": getZoneCount("اتاق ۱"),
-                "اتاق ۲": getZoneCount("اتاق ۲"),
-                "پذیرایی": getZoneCount("پذیرایی")
-            };
-
-            list.forEach((n, i) => {
-                const availableZone = VALID_ZONES.find(z => tempZones[z] < MAX_ZONE_CAPACITY) || "پذیرایی";
-                tempZones[availableZone]++;
-                payload.push({
-                    room_id: CURRENT_ROOM,
-                    name: n,
-                    sleep_zone: availableZone,
-                    is_senior: false,
-                    days_ago: 0,
-                    cycle_limit: DEFAULT_CYCLE_DAYS,
-                    last_area_idx: members.length + i,
-                    points: 0
-                });
-            });
-
-            if (payload.length > 0) {
-                const { error } = await supabaseClient.from('members').insert(payload);
-                if (error) {
-                    console.error("خطای ثبت گروهی اعضا:", error);
-                    showToast(`❌ خطا در ثبت گروهی: ${error.message}`, "⚠️");
-                    return;
-                }
-                document.getElementById('bulkMembersInput').value = "";
-                await loadCloudData();
-                showToast("اعضا با موفقیت در واحد ثبت شدند!", "🎉");
-            }
-        }
-
-        async function deleteMember(memberId) {
-            const m = members.find(x => x.id === memberId);
-            if (!m) return;
-            if (!confirm(`آیا از حذف «${m.name}» از این واحد اطمینان دارید؟`)) return;
-
-            await supabaseClient.from('tasks').delete().eq('member_id', memberId).eq('room_id', CURRENT_ROOM);
-            await supabaseClient.from('members').delete().eq('id', memberId).eq('room_id', CURRENT_ROOM);
+        async function deleteMember(id) {
+            if (!confirm("آیا از حذف این عضو مطمئن هستید؟")) return;
+            await supabaseClient.from('tasks').delete().eq('member_id', id).eq('room_id', CURRENT_ROOM);
+            await supabaseClient.from('members').delete().eq('id', id).eq('room_id', CURRENT_ROOM);
             await loadCloudData();
-            showToast(`${m.name} از لیست واحد حذف شد.`, "🗑️");
+            showToast("عضو حذف شد.", "🗑️");
         }
 
-        async function updateMemberZone(memberId, newZone) {
-            if (getZoneCount(newZone, memberId) >= MAX_ZONE_CAPACITY) {
-                showToast(`⛔ ظرفیت «${newZone}» تکمیل است (حداکثر ۴ نفر)!`, "⚠️");
-                renderAll();
-                return;
-            }
-            await supabaseClient.from('members').update({ sleep_zone: newZone }).eq('id', memberId).eq('room_id', CURRENT_ROOM);
-            await loadCloudData();
-            showToast("محل خواب بروزرسانی شد.", "🛏️");
-        }
-
-        function renderSeniorSelectors() {
-            const s1 = document.getElementById('senior1Select');
-            const s2 = document.getElementById('senior2Select');
-            if (!s1 || !s2) return;
-
-            const seniors = members.filter(m => m.isSenior);
-            const opts = `<option value="">-- انتخاب --</option>` + members.map(m => `<option value="${m.id}">${m.name}</option>`).join('');
-            s1.innerHTML = opts; s2.innerHTML = opts;
-            s1.value = seniors[0] ? seniors[0].id : "";
-            s2.value = seniors[1] ? seniors[1].id : "";
-        }
-
-        async function updateSeniorsFromSelects() {
-            const s1Id = parseInt(document.getElementById('senior1Select').value) || null;
-            const s2Id = parseInt(document.getElementById('senior2Select').value) || null;
-            
-            for (const m of members) {
-                const shouldBeSenior = (m.id === s1Id || m.id === s2Id);
-                if (m.isSenior !== shouldBeSenior) {
-                    await supabaseClient.from('members').update({ is_senior: shouldBeSenior }).eq('id', m.id).eq('room_id', CURRENT_ROOM);
-                }
-            }
-            await loadCloudData();
-            showToast("ارشدهای واحد بروزرسانی شدند.", "👑");
-        }
-
-        // =========================================================================
-        // ۵. مدیریت نوبت‌ها، تحویل کار، جایگزینی و امتیازدهی (در دیتابیس ابری)
-        // =========================================================================
+        // تابع اصلاح‌شده ثبت نوبت (بدون ارسال دستی id)
         async function handleTaskSubmission() {
             const memberId = parseInt(document.getElementById('memberSelect').value);
             const member = members.find(m => m.id === memberId);
-            if (!member) {
-                showToast("لطفاً ابتدا از تب «اعضا و اتاق‌ها» اعضای واحد را اضافه کنید!", "⚠️");
-                return;
-            }
+            if (!member) { showToast("ابتدا یک عضو انتخاب کنید!", "⚠️"); return; }
+            
             const area = document.getElementById('areaSelect').value;
-            const partnerName = document.getElementById('partnerSelect').value || null;
             const date = document.getElementById('dateInput').value.trim();
-            const start = document.getElementById('startTimeInput').value;
-            const end = document.getElementById('endTimeInput').value;
-
-            if (!date || !validate24HourRange()) {
-                document.getElementById('dateTimeError').innerText = "⚠️ لطفاً تاریخ و بازه زمانی معتبر انتخاب کنید!";
-                document.getElementById('dateTimeError').classList.remove('hidden');
-                return;
-            }
+            if (!date) { showToast("تاریخ را انتخاب کنید!", "⚠️"); return; }
 
             const newTask = {
                 room_id: CURRENT_ROOM,
-                member_id: member.id,
+                member_id: memberId,
                 member_name: member.name,
                 sleep_zone: member.sleepZone,
-                partner_name: partnerName,
                 area: area,
                 date: date,
-                start_time: start,
-                end_time: end,
-                status: 'todo',
-                score: 0,
-                pending_star: 0,
-                has_voted: false
+                start_time: document.getElementById('startTimeInput').value,
+                end_time: document.getElementById('endTimeInput').value,
+                status: 'todo'
             };
 
             const { error } = await supabaseClient.from('tasks').insert([newTask]);
@@ -782,10 +350,9 @@
                 showToast(`خطا در ثبت نوبت: ${error.message}`, "⚠️");
                 return;
             }
-            
-            toggleDrawer('newSlotDrawer', 'newSlotDrawerIcon', false);
+
             await loadCloudData();
-            showToast("نوبت نظافت در واحد ثبت شد!", "🚀");
+            showToast("نوبت ثبت شد!", "🚀");
         }
 
         async function deleteTask(id) {
@@ -794,296 +361,38 @@
             showToast("نوبت حذف شد.", "🗑️");
         }
 
-        function openVerifyModal(taskId) {
-            activeVerifyId = taskId;
-            verifyPhotosState = { before: false, after: false };
-            document.getElementById('beforePreview').classList.add('hidden');
-            document.getElementById('afterPreview').classList.add('hidden');
-            document.getElementById('beforeClearBtn').classList.add('hidden');
-            document.getElementById('afterClearBtn').classList.add('hidden');
-            document.getElementById('checklistContainer').innerHTML = ["تمیز کردن کامل سطح و کف", "خالی کردن سطل زباله و نظم‌دهی"].map(item => `
-                <label class="flex items-center gap-2 cursor-pointer bg-slate-900 p-2 rounded-xl"><input type="checkbox" class="w-4 h-4 accent-emerald-500 rounded"><span>${item}</span></label>
-            `).join('');
-            document.getElementById('verifyModal').classList.remove('hidden');
-        }
-
-        function closeVerifyModal() { document.getElementById('verifyModal').classList.add('hidden'); }
-
-        function clearSelectedPhoto(type) {
-            verifyPhotosState[type] = false;
-            document.getElementById(`${type}Preview`).classList.add('hidden');
-            document.getElementById(`${type}ClearBtn`).classList.add('hidden');
-        }
-
-        function handlePhoto(event, type) {
-            const file = event.target.files[0];
-            if (!file) return;
-            verifyPhotosState[type] = true;
-            const reader = new FileReader();
-            reader.onload = e => {
-                const img = document.getElementById(`${type}Preview`);
-                img.src = e.target.result;
-                img.classList.remove('hidden');
-                document.getElementById(`${type}ClearBtn`).classList.remove('hidden');
-            };
-            reader.readAsDataURL(file);
-        }
-
-        async function submitVerification() {
-            if (!verifyPhotosState.before || !verifyPhotosState.after) {
-                showToast("لطفاً هر دو عکس قبل و بعد را انتخاب کنید!", "⚠️");
-                return;
-            }
-            const t = tasks.find(x => x.id === activeVerifyId);
-            if (t) {
-                await supabaseClient.from('tasks').update({ status: 'done' }).eq('id', t.id).eq('room_id', CURRENT_ROOM);
-                const m = members.find(x => x.id === t.memberId);
-                if (m) {
-                    const areas = getAreas();
-                    await supabaseClient.from('members').update({
-                        days_ago: 0,
-                        points: m.points + 10,
-                        last_area_idx: (m.lastAreaIdx + 1) % areas.length
-                    }).eq('id', m.id).eq('room_id', CURRENT_ROOM);
-                }
-            }
-            closeVerifyModal();
-            await loadCloudData();
-            showToast("نظافت تحویل داده شد و +۱۰ امتیاز ثبت گردید!", "🎉");
-        }
-
-        async function selectPendingStar(taskId, stars) {
-            const t = tasks.find(x => x.id === taskId);
-            if (t && !t.hasVoted) {
-                await supabaseClient.from('tasks').update({ pending_star: stars }).eq('id', taskId).eq('room_id', CURRENT_ROOM);
-                await loadCloudData();
-            }
-        }
-
-        async function confirmAndLockVote(taskId) {
-            const t = tasks.find(x => x.id === taskId);
-            if (t && !t.hasVoted && t.pendingStar > 0) {
-                await supabaseClient.from('tasks').update({
-                    score: t.pendingStar,
-                    has_voted: true
-                }).eq('id', taskId).eq('room_id', CURRENT_ROOM);
-
-                const m = members.find(x => x.id === t.memberId);
-                if (m) {
-                    await supabaseClient.from('members').update({ points: m.points + t.pendingStar }).eq('id', m.id).eq('room_id', CURRENT_ROOM);
-                }
-                await loadCloudData();
-                showToast("امتیاز کیفیت ثبت و قفل شد!", "🔒");
-            }
-        }
-
-        function openTakeover(taskId) {
-            activeTakeoverId = taskId;
-            document.getElementById('volunteerSelect').innerHTML = members.map(m => `<option value="${m.id}">${m.name}</option>`).join('');
-            document.getElementById('takeoverModal').classList.remove('hidden');
-        }
-
-        async function confirmTakeover() {
-            const t = tasks.find(x => x.id === activeTakeoverId);
-            const vId = parseInt(document.getElementById('volunteerSelect').value);
-            const v = members.find(x => x.id === vId);
-            if (t && v) {
-                await supabaseClient.from('tasks').update({
-                    member_id: v.id,
-                    member_name: v.name,
-                    sleep_zone: v.sleepZone
-                }).eq('id', t.id).eq('room_id', CURRENT_ROOM);
-
-                await supabaseClient.from('members').update({ points: v.points + 15 }).eq('id', v.id).eq('room_id', CURRENT_ROOM);
-                document.getElementById('takeoverModal').classList.add('hidden');
-                await loadCloudData();
-                showToast(`جایگزینی ثبت شد و +۱۵ امتیاز به ${v.name} تعلق گرفت!`, "🤝");
-            }
-        }
-
-        async function redeemSkip(id) {
-            const m = members.find(x => x.id === id);
-            if (m && m.points >= 50) {
-                await supabaseClient.from('members').update({
-                    points: m.points - 50,
-                    cycle_limit: m.cycleLimit + 9
-                }).eq('id', id).eq('room_id', CURRENT_ROOM);
-                await loadCloudData();
-                showToast("پاداش معافیت ۱ دوره کامل فعال شد!", "🎁");
-            }
-        }
-
-        // =========================================================================
-        // ۶. توابع کمکی رابط کاربری و رندرینگ (UI & Rendering)
-        // =========================================================================
-        function toggleDrawer(drawerId, iconId, forceOpen = null) {
-            const drawer = document.getElementById(drawerId);
-            const icon = document.getElementById(iconId);
-            const isHidden = drawer.classList.contains('hidden');
-
-            if (forceOpen === true || (forceOpen === null && isHidden)) {
-                drawer.classList.remove('hidden');
-                if (icon) icon.innerText = '▲ بستن';
-            } else {
-                drawer.classList.add('hidden');
-                if (icon) icon.innerText = '▼ باز کردن';
-            }
-        }
-
-        function init24HourTimeSelectors() {
-            const startSel = document.getElementById('startTimeInput');
-            const endSel = document.getElementById('endTimeInput');
-            if(!startSel || !endSel) return;
-            let optionsHtml = '';
-
-            for (let h = 0; h < 24; h++) {
-                for (let m of ['00', '30']) {
-                    const time24 = `${String(h).padStart(2, '0')}:${m}`;
-                    let periodLabel = h < 6 ? 'بامداد' : h < 12 ? 'صبح' : h < 16 ? 'ظهر' : h < 20 ? 'عصر' : 'شب';
-                    optionsHtml += `<option value="${time24}">${time24} (${periodLabel})</option>`;
-                }
-            }
-            startSel.innerHTML = optionsHtml;
-            endSel.innerHTML = optionsHtml;
-            startSel.value = "16:00";
-            endSel.value = "18:00";
-        }
-
-        function timeToMinutes(timeStr) {
-            const [hours, minutes] = timeStr.split(':').map(Number);
-            return (hours * 60) + minutes;
-        }
-
-        function validate24HourRange() {
-            const startMin = timeToMinutes(document.getElementById('startTimeInput').value);
-            const endMin = timeToMinutes(document.getElementById('endTimeInput').value);
-            const errEl = document.getElementById('dateTimeError');
-
-            if (endMin <= startMin) {
-                errEl.innerText = "⚠️ خطا: ساعت پایان باید بعد از ساعت شروع باشد!";
-                errEl.classList.remove('hidden');
-                return false;
-            }
-            errEl.classList.add('hidden');
-            return true;
-        }
-
-        async function changeSpacePreset() {
-            currentPreset = document.getElementById('spacePresetSelect').value;
-            if (CURRENT_ROOM) {
-                await supabaseClient.from('units').update({ preset: currentPreset }).eq('room_id', CURRENT_ROOM);
-            }
-            renderAll();
-            showToast("الگوی فضای واحد تغییر کرد!", "🏠");
-        }
-
-        function getAreas() {
-            return SPACE_PRESETS[currentPreset].areas;
-        }
-
-        function renderFormSelects() {
-            const mSelect = document.getElementById('memberSelect');
-            if(mSelect) mSelect.innerHTML = members.length === 0 ? `<option value="">-- ابتدا عضو اضافه کنید --</option>` : members.map(m => `<option value="${m.id}">${m.name} (${m.sleepZone})</option>`).join('');
-
-            const pSelect = document.getElementById('partnerSelect');
-            if(pSelect) pSelect.innerHTML = `<option value="">بدون همیار</option>` + members.map(m => `<option value="${m.name}">${m.name}</option>`).join('');
-
-            const aSelect = document.getElementById('areaSelect');
-            if(aSelect) aSelect.innerHTML = getAreas().map(a => `<option value="${a}">🧹 ${a}</option>`).join('');
-        }
-
-        function suggestNextAreaForMember() {
-            const memberId = parseInt(document.getElementById('memberSelect').value);
-            const member = members.find(m => m.id === memberId);
-            if (!member) return;
-            const areas = getAreas();
-            document.getElementById('areaSelect').value = areas[(member.lastAreaIdx + 1) % areas.length];
-        }
-
-        function checkCoopEligibility() {
-            const area = document.getElementById('areaSelect').value;
-            const box = document.getElementById('coopPartnerBox');
-            if (SPACE_PRESETS[currentPreset].coopAreas.includes(area)) box.classList.remove('hidden');
-            else { box.classList.add('hidden'); document.getElementById('partnerSelect').value = ""; }
-        }
-
-        function applyQuickSlot(date, start, end) {
-            document.getElementById('dateInput').value = date;
-            document.getElementById('startTimeInput').value = start;
-            document.getElementById('endTimeInput').value = end;
-            showToast("زمان پیشنهادی انتخاب شد.", "⚡");
-        }
-
         function renderAll() {
-            renderFormSelects();
-            renderZoneCapacityButtons();
-            renderSeniorSelectors();
             document.getElementById('membersCountBadge').innerText = members.length;
-
-            const areas = getAreas();
             
-            // ۱. وضعیت سیکل اعضا
-            const cycleBarEl = document.getElementById('cycleBar');
-            if (members.length === 0) {
-                cycleBarEl.innerHTML = `<div class="col-span-full text-center py-4 text-xs text-slate-400">هنوز عضوی در این واحد ثبت نشده است. از تب «اعضا و اتاق‌ها» اعضای واحد را اضافه کنید.</div>`;
-            } else {
-                cycleBarEl.innerHTML = members.map(m => `
-                    <div class="p-2.5 rounded-xl border ${m.daysAgo >= 8 ? 'bg-rose-950/40 border-rose-500/60' : 'bg-slate-900 border-slate-800'} text-xs flex flex-col justify-between">
-                        <div class="flex justify-between items-center"><strong class="text-white text-[11px] truncate">${m.isSenior ? '👑 ' : ''}${m.name}</strong><span class="text-[9px] bg-slate-800 text-indigo-300 px-1 py-0.5 rounded shrink-0">${m.sleepZone}</span></div>
-                        <div class="flex justify-between items-center mt-1 pt-1 border-t border-slate-800 text-[10px]"><span class="font-bold ${m.daysAgo >= 8 ? 'text-rose-400' : 'text-emerald-400'}">${m.daysAgo} روز پیش</span><span class="truncate max-w-[90px]">بعدی: ${areas[(m.lastAreaIdx+1)%areas.length]}</span></div>
-                    </div>
-                `).join('');
-            }
+            const mSelect = document.getElementById('memberSelect');
+            if (mSelect) mSelect.innerHTML = members.length === 0 ? `<option value="">-- اول عضو اضافه کنید --</option>` : members.map(m => `<option value="${m.id}">${m.name} (${m.sleepZone})</option>`).join('');
+            
+            const aSelect = document.getElementById('areaSelect');
+            if (aSelect) aSelect.innerHTML = (SPACE_PRESETS[currentPreset] ? SPACE_PRESETS[currentPreset].areas : ["آشپزخانه"]).map(a => `<option value="${a}">${a}</option>`).join('');
 
-            // ۲. لیست نوبت‌های در صف و انجام شده
+            // سیکل
+            document.getElementById('cycleBar').innerHTML = members.length === 0 ? `<div class="col-span-full text-center py-4 text-xs text-slate-400">عضوی ثبت نشده است.</div>` : members.map(m => `
+                <div class="p-2.5 rounded-xl border bg-slate-900 border-slate-800 text-xs space-y-1">
+                    <strong class="text-white">${m.name}</strong>
+                    <div class="text-[10px] text-slate-400">${m.sleepZone}</div>
+                </div>
+            `).join('');
+
+            // اعضا
+            document.getElementById('membersGrid').innerHTML = members.length === 0 ? `<div class="col-span-full text-center py-4 text-xs text-slate-400">لیست اعضا خالی است.</div>` : members.map(m => `
+                <div class="bg-slate-900 border p-2.5 rounded-xl text-xs flex justify-between items-center">
+                    <div><strong class="text-white block">${m.name}</strong><span class="text-[10px] text-indigo-300">${m.sleepZone}</span></div>
+                    <button onclick="deleteMember(${m.id})" class="text-rose-400 hover:text-rose-300 p-1 font-bold">🗑️</button>
+                </div>
+            `).join('');
+
+            // نوبت‌ها
             const todo = tasks.filter(t => t.status === 'todo');
-            const done = tasks.filter(t => t.status === 'done');
             document.getElementById('todoCount').innerText = todo.length;
-            document.getElementById('doneCount').innerText = done.length;
-
-            document.getElementById('todoContainer').innerHTML = todo.length === 0 ? `<div class="text-center py-5 text-xs text-slate-500">نوبتی در صف انجام نیست.</div>` : todo.map((t, idx) => `
-                <div class="bg-slate-900 border border-slate-800 p-3 rounded-2xl space-y-2">
-                    <div class="flex justify-between items-start"><strong class="text-xs text-white">#${idx+1} - ${t.memberName} (${t.sleepZone})${t.partnerName ? ` + 👥 ${t.partnerName}` : ''}</strong><span class="text-[11px] font-bold bg-emerald-500/15 text-emerald-300 px-2 py-0.5 rounded-lg">${t.area}</span></div>
-                    <div class="flex justify-between items-center bg-slate-950 p-2 rounded-xl text-xs"><span>📅 ${t.date} | ⏰ ${t.start} تا ${t.end}</span><button onclick="deleteTask(${t.id})" class="text-rose-400 font-bold text-xs">🗑️ حذف</button></div>
-                    <div class="grid grid-cols-2 gap-2"><button onclick="openTakeover(${t.id})" class="bg-amber-500/15 text-amber-300 py-1.5 rounded-xl text-xs font-bold">🤝 جایگزینی</button><button onclick="openVerifyModal(${t.id})" class="bg-emerald-600 text-white py-1.5 rounded-xl text-xs font-bold">📸 تحویل کار</button></div>
-                </div>
-            `).join('');
-
-            // ۳. کارت اعضای واحد (به همراه دکمه حذف و تغییر اتاق)
-            const membersGridEl = document.getElementById('membersGrid');
-            if (members.length === 0) {
-                membersGridEl.innerHTML = `<div class="col-span-full text-center py-4 text-xs text-slate-400">لیست اعضای واحد خالی است.</div>`;
-            } else {
-                membersGridEl.innerHTML = members.map(m => `
-                    <div class="bg-slate-900 border border-slate-800 p-2.5 rounded-xl text-xs space-y-1.5">
-                        <div class="flex justify-between items-center">
-                            <strong class="text-white truncate">${m.isSenior ? '👑 ' : ''}${m.name}</strong>
-                            <button onclick="deleteMember(${m.id})" class="bg-rose-500/15 text-rose-400 hover:bg-rose-500/25 px-2 py-0.5 rounded-lg text-[11px] font-bold transition">🗑️ حذف</button>
-                        </div>
-                        <select onchange="updateMemberZone(${m.id}, this.value)" class="w-full bg-slate-950 border border-slate-700 text-indigo-300 rounded-lg p-1.5 text-[11px] outline-none">
-                            <option value="اتاق ۱" ${m.sleepZone==='اتاق ۱'?'selected':''}>🛏️ اتاق ۱</option>
-                            <option value="اتاق ۲" ${m.sleepZone==='اتاق ۲'?'selected':''}>🛏️ اتاق ۲</option>
-                            <option value="پذیرایی" ${m.sleepZone==='پذیرایی'?'selected':''}>🛋️ پذیرایی</option>
-                        </select>
-                    </div>
-                `).join('');
-            }
-
-            // ۴. امتیازدهی به نظافت‌های انجام‌شده
-            document.getElementById('doneContainer').innerHTML = done.length === 0 ? `<div class="text-center py-5 text-xs text-slate-500">هنوز نظافتی تحویل داده نشده است.</div>` : done.map(t => `
-                <div class="bg-slate-900 border border-emerald-500/30 p-3 rounded-2xl space-y-2">
-                    <div class="flex justify-between items-center"><strong class="text-xs text-white">${t.memberName} - ${t.area}</strong><span class="text-xs text-amber-300 font-bold">${t.hasVoted ? `🔒 ثبت شده: ${t.score}⭐` : 'در انتظار رای کیفیت'}</span></div>
-                    <div class="bg-slate-950 p-2 rounded-xl flex justify-between items-center gap-2"><div class="flex gap-1">${[1,2,3,4,5].map(s=>`<button onclick="selectPendingStar(${t.id}, ${s})" ${t.hasVoted ? 'disabled' : ''} class="px-2 py-1 rounded text-xs font-bold ${(t.hasVoted ? t.score===s : t.pendingStar===s)?'bg-amber-500 text-slate-950':'bg-slate-800 text-slate-300'}">${s}⭐</button>`).join('')}</div>
-                    ${!t.hasVoted ? `<button onclick="confirmAndLockVote(${t.id})" class="bg-indigo-600 text-white px-3 py-1 rounded-lg text-xs font-bold shrink-0">ثبت نهایی</button>`:''}</div>
-                </div>
-            `).join('');
-
-            // ۵. رتبه‌بندی امتیازات واحد
-            const sortedMembers = [...members].sort((a,b) => b.points - a.points);
-            document.getElementById('rankingList').innerHTML = sortedMembers.length === 0 ? `<div class="text-center py-4 text-xs text-slate-400">هنوز عضوی ثبت نشده است.</div>` : sortedMembers.map((m, i) => `
-                <div class="bg-slate-900 border border-slate-800 p-3 rounded-2xl text-xs space-y-2">
-                    <div class="flex justify-between items-center"><strong class="text-white">#${i+1} ${m.name}</strong><span class="text-amber-400 font-black">${m.points} امتیاز</span></div>
-                    <button onclick="redeemSkip(${m.id})" class="w-full py-2 rounded-xl text-[11px] font-bold transition ${m.points>=50?'bg-amber-500 text-slate-950':'bg-slate-950 text-slate-500 border border-slate-800'}">🎁 معافیت ۱ دوره (کسر ۵۰ امتیاز)</button>
+            document.getElementById('todoContainer').innerHTML = todo.length === 0 ? `<div class="text-center py-4 text-xs text-slate-500">نوبتی نیست.</div>` : todo.map(t => `
+                <div class="bg-slate-900 border border-slate-800 p-3 rounded-2xl space-y-1 text-xs">
+                    <div class="flex justify-between font-bold text-white"><span>${t.memberName} (${t.area})</span><button onclick="deleteTask(${t.id})" class="text-rose-400">حذف</button></div>
+                    <div class="text-slate-400">📅 ${t.date} | ⏰ ${t.start} تا ${t.end}</div>
                 </div>
             `).join('');
         }
@@ -1102,13 +411,40 @@
             document.getElementById('toastText').innerText = msg;
             document.getElementById('toastIcon').innerText = icon;
             t.classList.remove('hidden');
-            setTimeout(() => t.classList.add('hidden'), 3800);
+            setTimeout(() => t.classList.add('hidden'), 3500);
         }
 
-        // مقداردهی اولیه و بررسی نشست ذخیره‌شده
-        init24HourTimeSelectors();
-        renderZoneCapacityButtons();
+        function toggleDrawer(drawerId, iconId) {
+            const d = document.getElementById(drawerId);
+            const i = document.getElementById(iconId);
+            d.classList.toggle('hidden');
+            i.innerText = d.classList.contains('hidden') ? '▼ باز کردن' : '▲ بستن';
+        }
 
+        function init24HourTimeSelectors() {
+            const startSel = document.getElementById('startTimeInput');
+            const endSel = document.getElementById('endTimeInput');
+            if(!startSel || !endSel) return;
+            let html = '';
+            for (let h = 0; h < 24; h++) {
+                for (let m of ['00', '30']) {
+                    const t = `${String(h).padStart(2, '0')}:${m}`;
+                    html += `<option value="${t}">${t}</option>`;
+                }
+            }
+            startSel.innerHTML = html; endSel.innerHTML = html;
+            startSel.value = "16:00"; endSel.value = "18:00";
+        }
+
+        function changeSpacePreset() {
+            currentPreset = document.getElementById('spacePresetSelect').value;
+            renderAll();
+        }
+
+        init24HourTimeSelectors();
+        renderZoneButtons();
+
+        // بررسی لاگین خودکار قبلی
         const savedSession = localStorage.getItem('KHABGAH_SESSION_V1');
         if (savedSession) {
             try {
