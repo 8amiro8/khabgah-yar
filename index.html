@@ -3,155 +3,212 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>خوابگاه‌یار هوشمند | سامانه اتوماسیون نظافت واحد</title>
+    <title>خوابگاه‌یار هوشمند | سامانه جامع اتوماسیون نظافت واحد</title>
     
     <!-- فریم‌ورک Tailwind CSS برای طراحی ریسپانسیو و مدرن -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- فونت فارسی وزیرمتن -->
+    
+    <!-- فونت فارسی وزیرمتن (Vazirmatn) -->
     <link href="https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/Vazirmatn-font-face.css" rel="stylesheet" type="text/css" />
+    
     <!-- تقویم شمسی JalaliDatePicker -->
     <link rel="stylesheet" href="https://unpkg.com/@majidh1/jalalidatepicker/dist/jalalidatepicker.min.css">
     <script type="text/javascript" src="https://unpkg.com/@majidh1/jalalidatepicker/dist/jalalidatepicker.min.js"></script>
-    <!-- کتابخانه ارتباط با دیتابیس ابری Supabase -->
+    
+    <!-- کتابخانه جشن و آتش‌بازی (Canvas Confetti) برای انیمیشن‌های تحویل کار و پاداش -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+
+    <!-- کتابخانه رسمی ارتباط با دیتابیس ابری Supabase -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
     <style>
+        /* تنظیمات پایه و بهینه‌سازی نمایش در موبایل و دسکتاپ */
         html, body {
             font-family: 'Vazirmatn', sans-serif;
             background-color: #0f172a;
+            background-image: 
+                radial-gradient(at 0% 0%, rgba(79, 70, 229, 0.14) 0px, transparent 50%),
+                radial-gradient(at 100% 100%, rgba(16, 185, 129, 0.1) 0px, transparent 50%);
+            background-attachment: fixed;
             color: #f8fafc;
             overflow-x: hidden;
             width: 100%;
             max-width: 100vw;
-            padding-bottom: 95px;
+            padding-bottom: 100px;
             -webkit-tap-highlight-color: transparent;
+            scroll-behavior: smooth;
         }
 
+        /* جلوگیری از زوم ناخواسته در مرورگر Safari آیفون هنگام لمس ورودی‌ها */
         input, select, textarea {
             font-size: 16px !important;
         }
 
+        /* استایل کارت‌های شیشه‌ای (Glassmorphism) */
         .app-card {
-            background: #1e293b;
+            background: rgba(30, 41, 59, 0.88);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
             border: 1px solid rgba(255, 255, 255, 0.08);
             width: 100%;
             box-sizing: border-box;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);
         }
 
+        /* انیمیشن‌های ورود و تعامل نرم */
+        @keyframes fadeInSlide {
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-card {
+            animation: fadeInSlide 0.28s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+
+        @keyframes pulseGlow {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(244, 63, 94, 0.4); }
+            50% { box-shadow: 0 0 0 6px rgba(244, 63, 94, 0); }
+        }
+        .urgent-glow {
+            animation: pulseGlow 2s infinite;
+        }
+
+        /* سفارشی‌سازی تقویم شمسی */
         jdp-container { 
             z-index: 99999 !important; 
             max-width: 94vw !important; 
             font-family: 'Vazirmatn', sans-serif !important; 
+            border-radius: 16px !important;
         }
+
+        /* اسکرول‌بار سفارشی */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #0f172a; }
+        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 9999px; }
     </style>
 </head>
 <body class="min-h-screen">
 
-    <!-- 🔒 ۱. صفحه قفل و احراز هویت اختصاصی هر واحد (Authentication Overlay) -->
-    <div id="authOverlay" class="fixed inset-0 z-[100] bg-slate-950/95 backdrop-blur-md flex items-center justify-center p-4">
-        <div class="app-card max-w-sm w-full p-6 rounded-3xl border border-indigo-500/40 shadow-2xl space-y-5 text-center">
+    <!-- ========================================================================= -->
+    <!-- 🔒 ۱. دروازه قفل و احراز هویت اختصاصی هر واحد (Authentication Overlay)   -->
+    <!-- ========================================================================= -->
+    <div id="authOverlay" class="fixed inset-0 z-[100] bg-slate-950/95 backdrop-blur-md flex items-center justify-center p-4 transition-opacity duration-300">
+        <div class="app-card max-w-sm w-full p-6 rounded-3xl border border-indigo-500/40 shadow-2xl space-y-5 text-center animate-card">
             <div class="w-16 h-16 rounded-2xl bg-indigo-600/20 border border-indigo-500/40 flex items-center justify-center text-3xl mx-auto shadow-inner">
                 🔐
             </div>
             <div>
                 <h2 class="text-base sm:text-lg font-black text-white">ورود به پنل اختصاصی واحد</h2>
-                <p class="text-[11px] text-slate-400 mt-1">هر واحد فقط به برنامه نظافت و اعضای خود دسترسی دارد</p>
+                <p class="text-[11px] text-slate-400 mt-1 leading-relaxed">هر واحد یا اتاق فقط به برنامه نظافت، عکس‌ها و اعضای خود دسترسی دارد</p>
             </div>
 
-            <!-- تب تغییر حالت بین ورود به واحد و ساخت واحد جدید -->
-            <div class="grid grid-cols-2 gap-1 bg-slate-900 p-1 rounded-xl text-xs font-bold">
-                <button type="button" onclick="switchAuthMode('login')" id="authTabLogin" class="py-2.5 rounded-lg bg-indigo-600 text-white transition">ورود به واحد</button>
-                <button type="button" onclick="switchAuthMode('register')" id="authTabRegister" class="py-2.5 rounded-lg text-slate-400 transition">ثبت واحد جدید</button>
+            <!-- تب تغییر حالت بین ورود به واحد و ثبت واحد جدید -->
+            <div class="grid grid-cols-2 gap-1 bg-slate-900 p-1 rounded-xl text-xs font-bold border border-slate-800">
+                <button type="button" onclick="switchAuthMode('login')" id="authTabLogin" class="py-2.5 rounded-lg bg-indigo-600 text-white transition shadow">ورود به واحد</button>
+                <button type="button" onclick="switchAuthMode('register')" id="authTabRegister" class="py-2.5 rounded-lg text-slate-400 hover:text-slate-200 transition">ثبت واحد جدید</button>
             </div>
 
             <div class="space-y-3 text-right">
                 <div>
                     <label class="text-xs text-slate-300 font-bold block mb-1">شماره یا کد واحد (انگلیسی یا عدد):</label>
-                    <input type="text" id="authRoomInput" placeholder="مثلاً: 402 یا unit-5" dir="ltr" class="w-full bg-slate-900 border border-slate-700 rounded-xl p-3 text-white text-center font-bold outline-none focus:border-indigo-500">
+                    <input type="text" id="authRoomInput" placeholder="مثلاً: 402 یا unit-5" dir="ltr" class="w-full bg-slate-900 border border-slate-700 rounded-xl p-3 text-white text-center font-bold outline-none focus:border-indigo-500 transition">
                 </div>
                 <div>
                     <label class="text-xs text-slate-300 font-bold block mb-1">رمز عبور واحد (PIN):</label>
-                    <input type="password" id="authPinInput" placeholder="••••" dir="ltr" class="w-full bg-slate-900 border border-slate-700 rounded-xl p-3 text-white text-center font-bold tracking-widest outline-none focus:border-indigo-500">
+                    <input type="password" id="authPinInput" placeholder="••••" dir="ltr" class="w-full bg-slate-900 border border-slate-700 rounded-xl p-3 text-white text-center font-bold tracking-widest outline-none focus:border-indigo-500 transition">
                 </div>
                 <p id="authErrorMsg" class="hidden text-xs text-rose-400 font-bold text-center bg-rose-500/10 p-2.5 rounded-xl border border-rose-500/30 leading-relaxed"></p>
             </div>
 
-            <button type="button" onclick="handleRoomAuth()" id="authSubmitBtn" class="w-full bg-indigo-600 hover:bg-indigo-500 active:bg-indigo-700 text-white font-black py-3.5 rounded-xl text-xs shadow-lg transition">
+            <button type="button" onclick="handleRoomAuth()" id="authSubmitBtn" class="w-full bg-indigo-600 hover:bg-indigo-500 active:bg-indigo-700 text-white font-black py-3.5 rounded-xl text-xs shadow-lg shadow-indigo-600/30 transition">
                 🚀 ورود به پنل واحد
             </button>
         </div>
     </div>
 
-    <!-- 🔔 ۲. نوار اعلان شناور (Toast) -->
-    <div id="toast" class="fixed top-3 left-3 right-3 z-50 hidden max-w-md mx-auto">
-        <div id="toastInner" class="bg-slate-900 border border-indigo-500 text-white px-4 py-3 rounded-2xl shadow-2xl text-xs font-bold flex items-center gap-2.5 leading-relaxed">
+    <!-- ========================================================================= -->
+    <!-- 🔔 ۲. نوار اعلان شناور (Toast Notification)                               -->
+    <!-- ========================================================================= -->
+    <div id="toast" class="fixed top-3 left-3 right-3 z-[110] hidden max-w-md mx-auto">
+        <div id="toastInner" class="bg-slate-900/95 backdrop-blur-md border border-indigo-500 text-white px-4 py-3 rounded-2xl shadow-2xl text-xs font-bold flex items-center gap-2.5 leading-relaxed animate-card">
             <span id="toastIcon" class="text-lg shrink-0">✨</span>
             <span id="toastText"></span>
         </div>
     </div>
 
-    <!-- 🧭 ۳. هدر اپلیکیشن (نمایش واحد فعال و دکمه خروج امن) -->
+    <!-- ========================================================================= -->
+    <!-- 🧭 ۳. هدر اپلیکیشن (نمایش واحد فعال، انتخاب نوع فضا، اعلان و خروج امن)   -->
+    <!-- ========================================================================= -->
     <header class="app-card sticky top-0 z-40 px-3.5 py-2.5 border-b border-slate-800">
         <div class="max-w-xl mx-auto flex justify-between items-center gap-2">
             <div class="flex items-center gap-2 min-w-0">
-                <div class="w-9 h-9 rounded-xl bg-indigo-600 flex items-center justify-center text-base shrink-0 shadow-md">
+                <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-500 to-indigo-700 flex items-center justify-center text-base shrink-0 shadow-md">
                     🧹
                 </div>
                 <div class="min-w-0">
-                    <div class="flex items-center gap-1.5">
+                    <div class="flex items-center gap-1.5 flex-wrap">
                         <h1 class="font-black text-xs sm:text-sm text-white truncate">خوابگاه‌یار</h1>
                         <span id="currentRoomDisplay" class="text-[10px] bg-indigo-950 text-indigo-300 px-2 py-0.5 rounded-md font-bold border border-indigo-500/30">---</span>
                         <button onclick="logoutRoom()" class="text-[10px] bg-rose-500/20 text-rose-300 border border-rose-500/30 px-2 py-0.5 rounded-md hover:bg-rose-500/30 transition font-bold">
                             خروج 🔒
                         </button>
                     </div>
-                    <select id="spacePresetSelect" onchange="changeSpacePreset()" class="bg-transparent text-[10px] text-slate-400 font-bold outline-none cursor-pointer truncate max-w-[190px] block mt-0.5">
-                        <option value="full_suite" class="bg-slate-900 text-white">🏠 واحد کامل (آشپزخانه، سرویس، اتاق)</option>
-                        <option value="single_room" class="bg-slate-900 text-white">🛏️ اتاق مشترک ۸-۱۲ نفره (فقط اتاق)</option>
+                    <!-- انتخابگر الگوی فضای واحد (واحد کامل در برابر اتاق مشترک) -->
+                    <select id="spacePresetSelect" onchange="changeSpacePreset()" class="bg-transparent text-[10px] text-slate-400 font-bold outline-none cursor-pointer truncate max-w-[200px] sm:max-w-xs block mt-0.5">
+                        <option value="full_suite" class="bg-slate-900 text-white">🏠 واحد کامل (آشپزخانه، سرویس، اتاق‌ها)</option>
+                        <option value="single_room" class="bg-slate-900 text-white">🛏️ اتاق مشترک ۸ تا ۱۲ نفره (تک‌فضا)</option>
                     </select>
                 </div>
             </div>
 
-            <button onclick="loadCloudData(true)" class="bg-slate-800 active:bg-slate-700 text-indigo-300 border border-slate-700 px-2.5 py-2 rounded-xl text-[11px] font-bold flex items-center gap-1 shrink-0 transition" title="همگام‌سازی مجدد با سرور">
-                <span>🔄</span>
-                <span class="hidden sm:inline">بروزرسانی</span>
-            </button>
+            <!-- دکمه‌های فعال‌سازی Push Notification و همگام‌سازی زنده -->
+            <div class="flex items-center gap-1.5 shrink-0">
+                <button onclick="enableAutoNotifications()" id="notifBtn" class="bg-amber-500/15 hover:bg-amber-500/25 active:scale-95 text-amber-300 border border-amber-500/30 px-2.5 py-2 rounded-xl text-[11px] font-bold flex items-center gap-1 transition" title="فعال‌سازی نوتیفیکیشن یادآوری">
+                    <span>🔔</span>
+                    <span class="hidden sm:inline" id="notifBtnText">یادآور</span>
+                </button>
+                <button onclick="loadCloudData(true)" class="bg-slate-800 hover:bg-slate-700 active:scale-95 text-indigo-300 border border-slate-700 px-2.5 py-2 rounded-xl text-[11px] font-bold flex items-center gap-1 transition" title="همگام‌سازی مجدد با سرور">
+                    <span>🔄</span>
+                    <span class="hidden sm:inline">بروزرسانی</span>
+                </button>
+            </div>
         </div>
     </header>
 
-    <!-- 📱 ۴. کانتینر اصلی برنامه -->
+    <!-- ========================================================================= -->
+    <!-- 📱 ۴. کانتینر اصلی برنامه                                                 -->
+    <!-- ========================================================================= -->
     <main class="max-w-xl mx-auto px-3 pt-3 space-y-3.5">
 
-        <!-- ================= تب ۱: برنامه نظافت ================= -->
-        <section id="view-board" class="space-y-3.5">
+        <!-- ================= تب ۱: برنامه نظافت (Board) ================= -->
+        <section id="view-board" class="space-y-3.5 animate-card">
 
-            <!-- وضعیت نوبت اعضا در یک نگاه -->
+            <!-- ۱.۱ وضعیت نوبت اعضای واحد در یک نگاه (محدود به ۴ نفر + دکمه بیشتر) -->
             <div class="app-card p-3.5 rounded-2xl">
                 <div class="flex justify-between items-center mb-2.5">
                     <h2 class="font-bold text-xs text-white flex items-center gap-1.5">
                         <span>⏳</span> وضعیت نوبت اعضای واحد (سیکل ۹ روزه)
                     </h2>
-                    <span class="text-[10px] bg-rose-500/20 text-rose-300 px-2 py-0.5 rounded-md font-bold">قرمز = نوبت رسیده</span>
+                    <span class="text-[10px] bg-rose-500/20 text-rose-300 border border-rose-500/30 px-2 py-0.5 rounded-md font-bold">قرمز = نوبت رسیده</span>
                 </div>
-                <div id="cycleBar" class="grid grid-cols-2 sm:grid-cols-3 gap-2"></div>
+                <div id="cycleBar" class="grid grid-cols-2 sm:grid-cols-2 gap-2"></div>
             </div>
 
-            <!-- نوبت‌های ثبت‌شده در صف انجام -->
+            <!-- ۱.۲ نوبت‌های ثبت‌شده در صف انجام (مرتب‌شده بر اساس زمان + محدود به ۳ مورد + دکمه بیشتر) -->
             <div class="app-card p-3.5 rounded-2xl border-t-4 border-t-indigo-500 space-y-2.5">
                 <div class="flex justify-between items-center">
                     <div>
                         <h3 class="font-bold text-sm text-white">📌 نوبت‌های ثبت‌شده در صف انجام</h3>
-                        <p class="text-[10px] text-slate-400">همگام‌سازی زنده بین تمام اعضای واحد</p>
+                        <p class="text-[10px] text-slate-400">مرتب‌شده بر اساس نزدیک‌ترین تاریخ و ساعت نظافت</p>
                     </div>
-                    <span id="todoCount" class="text-xs bg-indigo-500/20 text-indigo-300 px-2.5 py-0.5 rounded-full font-bold">0</span>
+                    <span id="todoCount" class="text-xs bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 px-2.5 py-0.5 rounded-full font-bold">0</span>
                 </div>
                 <div id="todoContainer" class="space-y-2.5"></div>
             </div>
 
-            <!-- بخش کشویی ثبت زمان خالی جدید -->
+            <!-- ۱.۳ بخش کشویی ثبت زمان خالی جدید برای نظافت (مجهز به تشخیص تداخل زمانی) -->
             <div class="app-card rounded-2xl overflow-hidden border border-indigo-500/30">
                 <button type="button" onclick="toggleDrawer('newSlotDrawer', 'newSlotDrawerIcon')" class="w-full p-3.5 bg-indigo-950/30 hover:bg-indigo-950/50 flex justify-between items-center text-right transition">
-                    <div class="flex items-center gap-2">
+                    <div class="flex items-center gap-2.5">
                         <span class="w-7 h-7 rounded-lg bg-indigo-600 text-white font-black flex items-center justify-center text-base shadow">+</span>
                         <div>
                             <span class="font-bold text-xs md:text-sm text-white block">ثبت زمان خالی جدید برای نظافت</span>
@@ -161,35 +218,37 @@
                     <span id="newSlotDrawerIcon" class="text-indigo-300 text-xs font-bold">▼ باز کردن</span>
                 </button>
 
-                <div id="newSlotDrawer" class="hidden p-4 border-t border-slate-800 space-y-3.5">
+                <div id="newSlotDrawer" class="hidden p-4 border-t border-slate-800 space-y-3.5 bg-slate-900/40">
                     <div>
                         <label class="text-xs text-slate-300 font-bold block mb-1">۱. انتخاب نام عضو:</label>
-                        <select id="memberSelect" onchange="suggestNextAreaForMember()" class="w-full bg-slate-900 border border-slate-700 rounded-xl p-2.5 text-white outline-none"></select>
+                        <select id="memberSelect" onchange="suggestNextAreaForMember()" class="w-full bg-slate-900 border border-slate-700 rounded-xl p-2.5 text-white outline-none focus:border-indigo-500"></select>
                     </div>
 
                     <div class="bg-slate-900/80 p-3 rounded-xl border border-slate-800 space-y-2">
-                        <label class="text-xs text-indigo-300 font-bold block">۲. محل نظافت (پیشنهاد هوشمند طبق نوبت):</label>
+                        <label class="text-xs text-indigo-300 font-bold block">۲. محل نظافت (پیشنهاد هوشمند طبق چرخش نوبت):</label>
                         <select id="areaSelect" onchange="checkCoopEligibility()" class="w-full bg-slate-950 border border-indigo-500/40 rounded-xl p-2.5 font-bold text-emerald-400 outline-none"></select>
 
+                        <!-- انتخاب همیار نظافت برای بخش‌های بزرگ -->
                         <div id="coopPartnerBox" class="pt-2 border-t border-slate-800/80">
                             <label class="text-[11px] text-amber-300 font-bold block mb-1">👥 همیار نظافت (اختیاری - تمیزکاری دو نفره):</label>
                             <select id="partnerSelect" class="w-full bg-slate-950 border border-slate-700 rounded-xl p-2 text-slate-300 outline-none"></select>
                         </div>
                     </div>
 
+                    <!-- دکمه‌های انتخاب سریع بازه زمانی -->
                     <div class="space-y-1.5">
-                        <label class="text-xs text-slate-300 font-bold block">۳. انتخاب سریع از پیشنهادهای آماده:</label>
+                        <label class="text-xs text-slate-300 font-bold block">۳. انتخاب سریع ساعت پیشنهادی:</label>
                         <div class="grid grid-cols-2 gap-1.5 text-xs">
-                            <button type="button" onclick="applyQuickSlot('1405/08/01', '12:00', '14:00')" class="bg-slate-900 active:bg-indigo-600/30 border border-slate-700 p-2 rounded-xl text-slate-200 font-bold">⚡ پنج‌شنبه ۱۲ تا ۱۴</button>
-                            <button type="button" onclick="applyQuickSlot('1405/08/01', '17:00', '19:00')" class="bg-slate-900 active:bg-indigo-600/30 border border-slate-700 p-2 rounded-xl text-slate-200 font-bold">⚡ پنج‌شنبه ۱۷ تا ۱۹</button>
+                            <button type="button" onclick="applyQuickSlot('12:00', '14:00')" class="bg-slate-900 hover:bg-slate-800 active:bg-indigo-600/30 border border-slate-700 p-2 rounded-xl text-slate-200 font-bold transition">⚡ ظهر (۱۲:۰۰ تا ۱۴:۰۰)</button>
+                            <button type="button" onclick="applyQuickSlot('17:00', '19:00')" class="bg-slate-900 hover:bg-slate-800 active:bg-indigo-600/30 border border-slate-700 p-2 rounded-xl text-slate-200 font-bold transition">⚡ عصر (۱۷:۰۰ تا ۱۹:۰۰)</button>
                         </div>
                     </div>
 
                     <div class="space-y-2.5 bg-slate-900/80 p-3 rounded-xl border border-slate-800">
-                        <label class="text-xs text-slate-300 font-bold block">یا تنظیم دقیق روز و ساعت (۲۴ ساعته):</label>
-                        <input type="text" id="dateInput" data-jdp placeholder="📅 لمس برای انتخاب تاریخ از تقویم..." readonly class="w-full bg-slate-950 border border-slate-700 rounded-xl p-2.5 text-white text-center font-bold cursor-pointer outline-none">
+                        <label class="text-xs text-slate-300 font-bold block">تنظیم دقیق تاریخ و ساعت (۲۴ ساعته):</label>
+                        <input type="text" id="dateInput" data-jdp placeholder="📅 لمس برای انتخاب تاریخ از تقویم شمسی..." readonly class="w-full bg-slate-950 border border-slate-700 rounded-xl p-2.5 text-white text-center font-bold cursor-pointer outline-none focus:border-indigo-500">
                         
-                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        <div class="grid grid-cols-2 gap-2">
                             <div>
                                 <span class="text-[11px] text-slate-400 block mb-1">از ساعت:</span>
                                 <select id="startTimeInput" onchange="validate24HourRange()" class="w-full bg-slate-950 border border-slate-700 rounded-xl p-2 font-bold text-white text-center outline-none"></select>
@@ -199,60 +258,63 @@
                                 <select id="endTimeInput" onchange="validate24HourRange()" class="w-full bg-slate-950 border border-slate-700 rounded-xl p-2 font-bold text-white text-center outline-none"></select>
                             </div>
                         </div>
-                        <p id="dateTimeError" class="hidden text-[11px] text-rose-400 font-bold"></p>
+                        <p id="dateTimeError" class="hidden text-[11px] text-rose-400 font-bold bg-rose-500/10 p-2 rounded-lg border border-rose-500/30 text-center"></p>
                     </div>
 
-                    <button onclick="handleTaskSubmission()" id="submitTaskBtn" class="w-full bg-indigo-600 active:bg-indigo-700 text-white font-black py-3 rounded-xl text-xs md:text-sm shadow-lg transition">
+                    <button onclick="handleTaskSubmission()" id="submitTaskBtn" class="w-full bg-indigo-600 hover:bg-indigo-500 active:bg-indigo-700 text-white font-black py-3 rounded-xl text-xs md:text-sm shadow-lg shadow-indigo-600/25 transition">
                         🚀 ثبت در جدول نوبت‌های واحد
                     </button>
                 </div>
             </div>
         </section>
 
-        <!-- ================= تب ۲: اعضا و اتاق‌ها ================= -->
-        <section id="view-members" class="hidden space-y-3.5">
+        <!-- ================= تب ۲: اعضا و اتاق‌ها (Members) ================= -->
+        <section id="view-members" class="hidden space-y-3.5 animate-card">
+            
+            <!-- ۲.۱ کشوی افزودن عضو جدید با کنترل سقف ۱۲ نفر و تطبیق نوع اتاق -->
             <div class="app-card rounded-2xl overflow-hidden border border-indigo-500/30">
-                <button type="button" onclick="toggleDrawer('addMemberDrawer', 'addMemberDrawerIcon')" class="w-full p-3.5 bg-indigo-950/30 flex justify-between items-center text-right">
-                    <div class="flex items-center gap-2">
-                        <span class="w-7 h-7 rounded-lg bg-indigo-600 text-white font-black flex items-center justify-center text-base">+</span>
+                <button type="button" onclick="toggleDrawer('addMemberDrawer', 'addMemberDrawerIcon')" class="w-full p-3.5 bg-indigo-950/30 hover:bg-indigo-950/50 flex justify-between items-center text-right transition">
+                    <div class="flex items-center gap-2.5">
+                        <span class="w-7 h-7 rounded-lg bg-indigo-600 text-white font-black flex items-center justify-center text-base shadow">+</span>
                         <div>
                             <span class="font-bold text-xs md:text-sm text-white block">افزودن عضو جدید و تعیین محل خواب</span>
-                            <span class="text-[10px] text-indigo-300">حداکثر ۴ نفر در هر اتاق یا پذیرایی</span>
+                            <span id="zoneSubtitleHint" class="text-[10px] text-indigo-300">ظرفیت کل واحد: حداکثر ۱۲ نفر (۴ نفر در هر بخش)</span>
                         </div>
                     </div>
                     <span id="addMemberDrawerIcon" class="text-indigo-300 text-xs font-bold">▼ باز کردن</span>
                 </button>
 
-                <div id="addMemberDrawer" class="hidden p-4 border-t border-slate-800 space-y-3.5">
+                <div id="addMemberDrawer" class="hidden p-4 border-t border-slate-800 space-y-3.5 bg-slate-900/40">
                     <div class="space-y-3">
                         <div>
-                            <label class="text-xs text-slate-300 font-bold block mb-1">نام و نام خانوادگی:</label>
-                            <input type="text" id="memberNameInput" placeholder="مثلاً: رضا محمدی" class="w-full bg-slate-900 border border-slate-700 rounded-xl p-2.5 text-white outline-none">
+                            <label class="text-xs text-slate-300 font-bold block mb-1">نام و نام خانوادگی عضو:</label>
+                            <input type="text" id="memberNameInput" placeholder="مثلاً: رضا محمدی" class="w-full bg-slate-900 border border-slate-700 rounded-xl p-2.5 text-white outline-none focus:border-indigo-500">
                             <p id="memberNameError" class="hidden text-[11px] text-rose-400 font-bold mt-1">⚠️ لطفاً نام عضو را وارد کنید!</p>
                         </div>
 
                         <div class="space-y-1.5">
-                            <label class="text-xs text-slate-300 font-bold block">انتخاب محل خواب (ظرفیت هر بخش: ۴ نفر):</label>
-                            <div id="sleepZoneButtonsGrid" class="grid grid-cols-2 gap-2 text-xs"></div>
-                            <p id="zoneCapacityError" class="hidden text-[11px] text-rose-400 font-bold mt-1 leading-relaxed"></p>
+                            <label id="zoneSelectLabel" class="text-xs text-slate-300 font-bold block">انتخاب محل خواب:</label>
+                            <div id="sleepZoneButtonsGrid" class="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs"></div>
+                            <p id="zoneCapacityError" class="hidden text-[11px] text-rose-400 font-bold mt-1 bg-rose-500/10 p-2 rounded-lg border border-rose-500/30 leading-relaxed"></p>
                         </div>
 
-                        <button onclick="addMember()" id="addMemberBtn" class="w-full bg-indigo-600 active:bg-indigo-700 text-white font-bold py-3 rounded-xl text-xs transition">
+                        <button onclick="addMember()" id="addMemberBtn" class="w-full bg-indigo-600 hover:bg-indigo-500 active:bg-indigo-700 text-white font-bold py-3 rounded-xl text-xs shadow-lg transition">
                             + ثبت عضو در واحد
                         </button>
                     </div>
 
+                    <!-- ثبت گروهی اعضا با رعایت سقف ۱۲ نفر -->
                     <div class="bg-slate-900 p-3 rounded-xl border border-slate-800 space-y-2">
-                        <span class="text-xs font-bold text-indigo-300 block">⚡ ثبت سریع چند نفر با هم:</span>
-                        <textarea id="bulkMembersInput" rows="2" placeholder="اسامی با کاما: علی حسینی، مهدی کریمی..." class="w-full bg-slate-950 border border-slate-700 rounded-xl p-2 text-white outline-none"></textarea>
+                        <span class="text-xs font-bold text-indigo-300 block">⚡ ثبت سریع چند هم‌اتاقی با هم:</span>
+                        <textarea id="bulkMembersInput" rows="2" placeholder="اسامی را با کاما جدا کنید: علی حسینی، مهدی کریمی..." class="w-full bg-slate-950 border border-slate-700 rounded-xl p-2 text-white outline-none"></textarea>
                         <button onclick="addBulkMembers()" class="w-full bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold py-2.5 rounded-xl border border-slate-700 transition">
-                            ثبت یک‌جای اسامی در واحد
+                            ثبت یک‌جای اسامی در واحد (تا سقف ۱۲ نفر)
                         </button>
                     </div>
                 </div>
             </div>
 
-            <!-- تعیین ارشدهای واحد -->
+            <!-- ۲.۲ تعیین ارشدهای واحد -->
             <div class="app-card p-3.5 rounded-2xl border border-amber-500/30 space-y-2.5">
                 <h3 class="font-bold text-xs text-amber-300 flex items-center gap-1.5">
                     <span>👑</span> تعیین ارشدهای واحد (حداکثر ۲ نفر)
@@ -269,7 +331,7 @@
                 </div>
             </div>
 
-            <!-- لیست اعضای واحد با قابلیت حذف و تغییر اتاق -->
+            <!-- ۲.۳ لیست اعضای واحد (محدود به ۴ نفر در حالت پیش‌فرض + دکمه بیشتر) -->
             <div class="app-card p-3.5 rounded-2xl space-y-2.5">
                 <div class="flex justify-between items-center">
                     <h3 class="font-bold text-xs md:text-sm text-white">👥 اعضای این واحد (<span id="membersCountBadge">0</span>/12 نفر)</h3>
@@ -279,19 +341,22 @@
             </div>
         </section>
 
-        <!-- ================= تب ۳: امتیاز و پاداش ================= -->
-        <section id="view-ranking" class="hidden space-y-4">
+        <!-- ================= تب ۳: امتیاز و پاداش (Ranking) ================= -->
+        <section id="view-ranking" class="hidden space-y-4 animate-card">
+            
+            <!-- ۳.۱ لیست نظافت‌های تحویل‌داده‌شده در انتظار امتیاز کیفیت (حذف خودکار پس از ثبت رای + مشاهده عکس‌ها) -->
             <div class="app-card p-3.5 rounded-2xl border-t-4 border-t-emerald-500 space-y-3">
                 <div class="flex justify-between items-center">
                     <div>
                         <h3 class="font-bold text-sm text-white">⭐ ثبت امتیاز کیفیت برای نظافت‌های انجام‌شده</h3>
-                        <p class="text-[10px] text-slate-400">ابتدا ستاره (۱ تا ۵) را انتخاب کرده و دکمه ثبت نهایی را بزنید</p>
+                        <p class="text-[10px] text-slate-400">پس از مشاهده عکس‌ها و ثبت نهایی ستاره، مورد از این لیست بسته می‌شود</p>
                     </div>
-                    <span id="doneCount" class="text-xs bg-emerald-500/20 text-emerald-300 px-2.5 py-0.5 rounded-full font-bold">0</span>
+                    <span id="doneCount" class="text-xs bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2.5 py-0.5 rounded-full font-bold">0</span>
                 </div>
                 <div id="doneContainer" class="space-y-2.5"></div>
             </div>
 
+            <!-- ۳.۲ جدول رتبه‌بندی و دریافت پاداش معافیت -->
             <div class="app-card p-3.5 rounded-2xl border-t-4 border-t-amber-500 space-y-3">
                 <div>
                     <h2 class="font-bold text-sm text-white">🏆 جدول رتبه‌بندی و دریافت پاداش معافیت</h2>
@@ -302,7 +367,9 @@
         </section>
     </main>
 
-    <!-- 🔽 ۵. منوی پایین موبایل (Bottom Navigation) -->
+    <!-- ========================================================================= -->
+    <!-- 🔽 ۵. منوی پایین موبایل (Bottom Navigation)                               -->
+    <!-- ========================================================================= -->
     <nav class="fixed bottom-0 left-0 right-0 bg-slate-900/95 backdrop-blur-md border-t border-slate-800 px-3 py-2 z-40">
         <div class="max-w-xl mx-auto grid grid-cols-3 gap-2">
             <button onclick="switchTab('board')" id="tab-board" class="py-2 rounded-xl bg-indigo-600 text-white text-xs font-bold flex flex-col items-center gap-0.5 transition shadow-lg">
@@ -320,66 +387,113 @@
         </div>
     </nav>
 
-    <!-- 📸 ۶. مودال تحویل کار و آپلود عکس -->
+    <!-- ========================================================================= -->
+    <!-- 📸 ۶. مودال تحویل کار (چک‌لیست اجباری + آپلود عکس اختیاری)                 -->
+    <!-- ========================================================================= -->
     <div id="verifyModal" class="fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-sm hidden flex items-center justify-center p-3.5 overflow-y-auto">
-        <div class="app-card bg-slate-900 w-full max-w-md rounded-3xl p-4 space-y-3.5 my-6">
-            <div class="flex justify-between items-center border-b border-slate-700 pb-2.5">
+        <div class="app-card bg-slate-900 w-full max-w-md rounded-3xl p-4 space-y-3.5 my-6 border border-slate-700 animate-card">
+            <div class="flex justify-between items-center border-b border-slate-800 pb-2.5">
                 <div>
-                    <h3 class="font-bold text-sm text-white">📸 تحویل کار و آپلود عکس</h3>
-                    <p class="text-[10px] text-indigo-400 font-bold mt-0.5">کسب +۱۰ امتیاز پایه پس از تحویل</p>
+                    <h3 class="font-bold text-sm text-white">✅ تحویل کار و ثبت چک‌لیست نظافت</h3>
+                    <p class="text-[10px] text-indigo-400 font-bold mt-0.5">کسب +۱۰ امتیاز پایه پس از تکمیل چک‌لیست</p>
                 </div>
                 <button onclick="closeVerifyModal()" class="bg-slate-800 text-slate-200 text-xs font-bold px-3 py-1.5 rounded-xl border border-slate-600">🔙 بازگشت</button>
             </div>
-            <div class="grid grid-cols-2 gap-2.5">
-                <div class="p-2 rounded-2xl border border-slate-700 bg-slate-950/60 space-y-1">
-                    <div class="relative h-28 rounded-xl overflow-hidden border-2 border-dashed border-slate-700 flex flex-col items-center justify-center text-center">
-                        <label class="cursor-pointer w-full h-full flex flex-col items-center justify-center p-2">
-                            <input type="file" id="beforeInput" accept="image/*" capture="environment" class="hidden" onchange="handlePhoto(event, 'before')">
-                            <span class="text-xl">🏚️</span><span class="text-[11px] font-bold text-slate-300 mt-1">۱. عکس قبل</span>
-                        </label>
-                        <img id="beforePreview" class="hidden absolute inset-0 w-full h-full object-cover" />
-                        <button type="button" id="beforeClearBtn" onclick="clearSelectedPhoto('before')" class="hidden absolute top-1 right-1 bg-rose-600 text-white text-[10px] font-bold px-2 py-0.5 rounded-lg shadow">🔄 تغییر</button>
-                    </div>
+
+            <!-- چک‌لیست اجباری -->
+            <div class="bg-slate-950 p-3.5 rounded-2xl border border-rose-500/40 space-y-2">
+                <div class="flex justify-between items-center">
+                    <span class="text-xs font-bold text-emerald-400 block">۱. چک‌لیست تمیزی بخش (علامت زدن همه الزامی است):</span>
+                    <span class="text-[10px] bg-rose-500/20 text-rose-300 px-2 py-0.5 rounded font-bold">اجباری</span>
                 </div>
-                <div class="p-2 rounded-2xl border border-slate-700 bg-slate-950/60 space-y-1">
-                    <div class="relative h-28 rounded-xl overflow-hidden border-2 border-dashed border-slate-700 flex flex-col items-center justify-center text-center">
-                        <label class="cursor-pointer w-full h-full flex flex-col items-center justify-center p-2">
-                            <input type="file" id="afterInput" accept="image/*" capture="environment" class="hidden" onchange="handlePhoto(event, 'after')">
-                            <span class="text-xl">✨</span><span class="text-[11px] font-bold text-slate-300 mt-1">۲. عکس بعد</span>
-                        </label>
-                        <img id="afterPreview" class="hidden absolute inset-0 w-full h-full object-cover" />
-                        <button type="button" id="afterClearBtn" onclick="clearSelectedPhoto('after')" class="hidden absolute top-1 right-1 bg-rose-600 text-white text-[10px] font-bold px-2 py-0.5 rounded-lg shadow">🔄 تغییر</button>
+                <div id="checklistContainer" class="space-y-2 text-xs text-slate-200 pt-1"></div>
+                <p id="checklistErrorMsg" class="hidden text-[11px] text-rose-400 font-bold bg-rose-500/10 p-2 rounded-xl border border-rose-500/30 text-center">
+                    ⚠️ برای تحویل کار، ابتدا باید تمام موارد چک‌لیست بالا را انجام داده و تیک بزنید!
+                </p>
+            </div>
+
+            <!-- آپلود عکس قبل و بعد (اختیاری ولی قابل مشاهده برای اعضا) -->
+            <div class="space-y-1.5">
+                <div class="flex justify-between items-center">
+                    <span class="text-xs font-bold text-slate-300">۲. آپلود عکس قبل و بعد (اختیاری - قابل مشاهده برای اعضا):</span>
+                    <span class="text-[10px] text-slate-400">اختیاری</span>
+                </div>
+                <div class="grid grid-cols-2 gap-2.5">
+                    <div class="p-2 rounded-2xl border border-slate-700 bg-slate-950/60 space-y-1">
+                        <div class="relative h-28 rounded-xl overflow-hidden border-2 border-dashed border-slate-700 flex flex-col items-center justify-center text-center">
+                            <label class="cursor-pointer w-full h-full flex flex-col items-center justify-center p-2 hover:bg-slate-900/50 transition">
+                                <input type="file" id="beforeInput" accept="image/*" class="hidden" onchange="handlePhoto(event, 'before')">
+                                <span class="text-xl">🏚️</span>
+                                <span class="text-[11px] font-bold text-slate-300 mt-1">عکس قبل (اختیاری)</span>
+                            </label>
+                            <img id="beforePreview" class="hidden absolute inset-0 w-full h-full object-cover" />
+                            <button type="button" id="beforeClearBtn" onclick="clearSelectedPhoto('before')" class="hidden absolute top-1 right-1 bg-rose-600 text-white text-[10px] font-bold px-2 py-0.5 rounded-lg shadow">🔄 حذف</button>
+                        </div>
+                    </div>
+                    <div class="p-2 rounded-2xl border border-slate-700 bg-slate-950/60 space-y-1">
+                        <div class="relative h-28 rounded-xl overflow-hidden border-2 border-dashed border-slate-700 flex flex-col items-center justify-center text-center">
+                            <label class="cursor-pointer w-full h-full flex flex-col items-center justify-center p-2 hover:bg-slate-900/50 transition">
+                                <input type="file" id="afterInput" accept="image/*" class="hidden" onchange="handlePhoto(event, 'after')">
+                                <span class="text-xl">✨</span>
+                                <span class="text-[11px] font-bold text-slate-300 mt-1">عکس بعد (اختیاری)</span>
+                            </label>
+                            <img id="afterPreview" class="hidden absolute inset-0 w-full h-full object-cover" />
+                            <button type="button" id="afterClearBtn" onclick="clearSelectedPhoto('after')" class="hidden absolute top-1 right-1 bg-rose-600 text-white text-[10px] font-bold px-2 py-0.5 rounded-lg shadow">🔄 حذف</button>
+                        </div>
                     </div>
                 </div>
             </div>
-            <div class="bg-slate-950 p-3 rounded-2xl border border-slate-800 space-y-2">
-                <span class="text-xs font-bold text-emerald-400 block">✅ چک‌لیست تمیزی بخش:</span>
-                <div id="checklistContainer" class="space-y-1.5 text-xs text-slate-200"></div>
-            </div>
-            <div class="grid grid-cols-3 gap-2">
-                <button type="button" onclick="closeVerifyModal()" class="col-span-1 bg-slate-800 text-slate-300 font-bold py-3 rounded-xl text-xs">🔙 بازگشت</button>
-                <button type="button" onclick="submitVerification()" class="col-span-2 bg-emerald-600 text-white font-black py-3 rounded-xl text-xs">ثبت نهایی نظافت ✔️</button>
+
+            <div class="grid grid-cols-3 gap-2 pt-1">
+                <button type="button" onclick="closeVerifyModal()" class="col-span-1 bg-slate-800 text-slate-300 font-bold py-3 rounded-xl text-xs">لغو</button>
+                <button type="button" onclick="submitVerification()" id="verifySubmitBtn" class="col-span-2 bg-emerald-600 hover:bg-emerald-500 text-white font-black py-3 rounded-xl text-xs shadow-lg shadow-emerald-600/30 transition">ثبت نهایی نظافت ✔️</button>
             </div>
         </div>
     </div>
 
-    <!-- 🤝 ۷. مودال داوطلب شدن و جایگزینی -->
+    <!-- ========================================================================= -->
+    <!-- 🖼️ ۷. مودال گالری مشاهده عکس‌های قبل و بعد توسط اعضای واحد                -->
+    <!-- ========================================================================= -->
+    <div id="photoGalleryModal" class="fixed inset-0 z-[120] bg-slate-950/90 backdrop-blur-md hidden flex items-center justify-center p-4">
+        <div class="app-card bg-slate-900 max-w-md w-full rounded-3xl p-4 space-y-3.5 border border-slate-700 animate-card">
+            <div class="flex justify-between items-center border-b border-slate-800 pb-2.5">
+                <h3 id="galleryTitle" class="font-bold text-xs sm:text-sm text-white">📸 تصاویر ثبت‌شده از نظافت</h3>
+                <button onclick="closePhotoGallery()" class="bg-slate-800 text-slate-300 text-xs font-bold px-3 py-1 rounded-xl border border-slate-700">✕ بستن</button>
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div class="bg-slate-950 p-2.5 rounded-2xl border border-slate-800 text-center space-y-1.5">
+                    <span class="text-[11px] font-bold text-slate-400 block">🏚️ تصویر قبل از نظافت</span>
+                    <img id="galleryBeforeImg" src="" class="w-full h-44 object-cover rounded-xl border border-slate-800 bg-slate-900" alt="عکس قبل">
+                </div>
+                <div class="bg-slate-950 p-2.5 rounded-2xl border border-emerald-500/30 text-center space-y-1.5">
+                    <span class="text-[11px] font-bold text-emerald-400 block">✨ تصویر بعد از نظافت</span>
+                    <img id="galleryAfterImg" src="" class="w-full h-44 object-cover rounded-xl border border-slate-800 bg-slate-900" alt="عکس بعد">
+                </div>
+            </div>
+            <button onclick="closePhotoGallery()" class="w-full bg-indigo-600 text-white font-bold py-3 rounded-xl text-xs">متوجه شدم</button>
+        </div>
+    </div>
+
+    <!-- ========================================================================= -->
+    <!-- 🤝 ۸. مودال داوطلب شدن و جایگزینی هم‌اتاقی                                 -->
+    <!-- ========================================================================= -->
     <div id="takeoverModal" class="fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-sm hidden flex items-center justify-center p-3.5">
-        <div class="app-card bg-slate-900 w-full max-w-md rounded-3xl p-4 space-y-4">
-            <div class="flex justify-between items-center">
+        <div class="app-card bg-slate-900 w-full max-w-md rounded-3xl p-4 space-y-4 border border-slate-700 animate-card">
+            <div class="flex justify-between items-center border-b border-slate-800 pb-2">
                 <h3 class="font-bold text-sm text-white">🤝 داوطلب شدن به جای هم‌اتاقی</h3>
                 <button onclick="document.getElementById('takeoverModal').classList.add('hidden')" class="text-xs bg-slate-800 px-2.5 py-1 rounded-lg">🔙 بازگشت</button>
             </div>
-            <p class="text-xs text-slate-300 leading-relaxed">چه کسی داوطلب انجام این نوبت نظافت است؟ (+۱۵ امتیاز پاداش همیاری)</p>
+            <p class="text-xs text-slate-300 leading-relaxed">چه کسی داوطلب انجام این نوبت نظافت است؟ (+۱۵ امتیاز پاداش همیاری بلافاصله به او تعلق می‌گیرد)</p>
             <select id="volunteerSelect" class="w-full bg-slate-950 border border-slate-700 rounded-xl p-2.5 text-white outline-none"></select>
-            <button onclick="confirmTakeover()" class="w-full bg-amber-500 text-slate-950 font-black py-3 rounded-xl text-xs">ثبت جایگزینی (+۱۵ امتیاز پاداش) 🚀</button>
+            <button onclick="confirmTakeover()" class="w-full bg-amber-500 hover:bg-amber-400 text-slate-950 font-black py-3 rounded-xl text-xs shadow-lg transition">ثبت جایگزینی (+۱۵ امتیاز پاداش) 🚀</button>
         </div>
     </div>
 
+    <!-- ========================================================================= -->
+    <!-- 🧠 منطق جاوااسکریپت و ارتباط با دیتابیس ابری Supabase                      -->
+    <!-- ========================================================================= -->
     <script>
-        // =========================================================================
         // ۱. تنظیمات اتصال به پایگاه داده ابری Supabase
-        // =========================================================================
         const SUPABASE_URL = 'https://faeysshpitmqbqpijtyi.supabase.co'; 
         const SUPABASE_KEY = 'sb_publishable_ak3uAyt9OxzspXyblRZgsw_tLJpiiC-'; 
         const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -388,39 +502,115 @@
         let CURRENT_ROOM = null;
         let authMode = 'login';
 
+        // الگوهای فضا (واحد کامل در برابر اتاق مشترک) و چک‌لیست‌های اختصاصی هر بخش
         const SPACE_PRESETS = {
-            full_suite: { areas: ["آشپزخانه", "دستشویی", "حمام", "پذیرایی و میزها", "اتاق خواب"], coopAreas: ["آشپزخانه", "پذیرایی و میزها", "اتاق خواب"] },
-            single_room: { areas: ["کل فضای اتاق و فرش‌ها", "میزهای مطالعه و غذاخوری", "کمدها و سطل زباله"], coopAreas: ["کل فضای اتاق و فرش‌ها"] }
+            full_suite: { 
+                areas: ["آشپزخانه", "دستشویی", "حمام", "پذیرایی و میزها", "اتاق خواب"], 
+                coopAreas: ["آشپزخانه", "پذیرایی و میزها", "اتاق خواب"] 
+            },
+            single_room: { 
+                areas: ["کل فضای اتاق و فرش‌ها", "میزهای مطالعه و غذاخوری", "کمدها و سطل زباله"], 
+                coopAreas: ["کل فضای اتاق و فرش‌ها"] 
+            }
+        };
+
+        const AREA_CHECKLISTS = {
+            "آشپزخانه": ["شستن سینک و ظروف عمومی", "تمیز کردن گاز و کابینت‌ها", "طی کشیدن کف و تخلیه سطل زباله"],
+            "دستشویی": ["شستشوی کامل کاسه و سنگ با مایع", "شستن روشویی و شیرآلات", "پر کردن مایع دستشویی و تخلیه سطل"],
+            "حمام": ["شستن کف و دیوارهای حمام", "تمیز کردن راه‌آب و جمع کردن موها", "نظم‌دهی به شامپوها و وسایل"],
+            "پذیرایی و میزها": ["جاروبرقی کشیدن کامل فرش و موکت", "گردگیری میزها و تلویزیون", "مرتب کردن مبلمان و زیراندازها"],
+            "اتاق خواب": ["جارو کشیدن کف اتاق", "گردگیری کمدها و میزها", "تهویه هوا و مرتب‌سازی عمومی"],
+            "کل فضای اتاق و فرش‌ها": ["جاروبرقی کشیدن کامل فرش‌ها", "گردگیری سطوح و لبه‌های پنجره", "مرتب‌سازی کفش‌ها و ورودی اتاق"],
+            "میزهای مطالعه و غذاخوری": ["دستمال کشیدن کامل روی میزها", "مرتب کردن صندلی‌ها", "پاک کردن لکه‌ها و جمع‌آوری خرده‌ریزها"],
+            "کمدها و سطل زباله": ["تخلیه کامل سطل زباله و تعویض کیسه", "گردگیری جلوی کمدها و یخچال", "شستشوی سطل در صورت نیاز"]
         };
 
         let currentPreset = 'full_suite';
         const DEFAULT_CYCLE_DAYS = 9;
-        const MAX_ZONE_CAPACITY = 4;
-        const VALID_ZONES = ["اتاق ۱", "اتاق ۲", "پذیرایی"];
+        const MAX_TOTAL_UNIT_MEMBERS = 12; // سقف قطعی کل اعضای واحد (مورد ۴)
         let selectedSleepZone = "اتاق ۱";
 
+        // وضعیت باز یا بسته بودن دکمه‌های «نمایش بیشتر» (موارد ۵، ۶ و ۹)
+        let expandedSections = {
+            cycle: false,   // پیش‌فرض: ۴ نفر
+            todo: false,    // پیش‌فرض: ۳ نوبت
+            members: false  // پیش‌فرض: ۴ نفر
+        };
+
+        // داده‌های واحد فعلی
         let members = [];
         let tasks = [];
 
+        // متغیرهای مودال تحویل کار و عکس‌ها
         let activeVerifyId = null;
         let activeTakeoverId = null;
-        let verifyPhotosState = { before: false, after: false };
+        let verifyPhotosData = { before: null, after: null };
 
+        // راه‌اندازی تقویم شمسی
         jalaliDatepicker.startWatch();
 
         // =========================================================================
-        // ۲. سیستم احراز هویت واحد (Login / Register با PIN Code)
+        // ۲. تابع بازگرداندن مناطق خواب مجاز بر اساس نوع واحد (رفع کامل مورد ۱۱)
+        // =========================================================================
+        function getValidZones() {
+            if (currentPreset === 'full_suite') {
+                return ["اتاق ۱", "اتاق ۲", "پذیرایی"];
+            } else {
+                return ["کل فضای اتاق مشترک"];
+            }
+        }
+
+        function getMaxZoneCapacity() {
+            return currentPreset === 'full_suite' ? 4 : 12;
+        }
+
+        // =========================================================================
+        // ۳. سیستم نوتیفیکیشن یادآوری مرورگر (Push Notification - مورد ۲)
+        // =========================================================================
+        function enableAutoNotifications() {
+            if (!("Notification" in window)) {
+                showToast("مرورگر شما از سیستم اعلان پشتیبانی نمی‌کند.", "⚠️");
+                return;
+            }
+
+            Notification.requestPermission().then(permission => {
+                if (permission === "granted") {
+                    document.getElementById('notifBtnText').innerText = "فعال شد ✓";
+                    showToast("اعلان‌های یادآوری نظافت با موفقیت فعال شدند!", "🔔");
+                    
+                    // ارسال یک نوتیفیکیشن فوری برای تایید عملکرد
+                    const urgentCount = tasks.filter(t => t.status === 'todo').length;
+                    new Notification("خوابگاه‌یار هوشمند 🧹", {
+                        body: urgentCount > 0 
+                            ? `هم‌اکنون ${urgentCount} نوبت نظافت در صف انجام واحد ${CURRENT_ROOM} قرار دارد.`
+                            : `سیستم یادآور برای واحد ${CURRENT_ROOM} فعال شد.`,
+                    });
+                } else {
+                    showToast("مجوز ارسال نوتیفیکیشن در مرورگر تایید نشد.", "❌");
+                }
+            });
+        }
+
+        // جشن و آتش‌بازی هنگام تحویل کار یا دریافت پاداش
+        function triggerCelebration() {
+            if (typeof confetti === 'function') {
+                confetti({ particleCount: 70, spread: 60, origin: { y: 0.65 } });
+            }
+        }
+
+        // =========================================================================
+        // ۴. سیستم احراز هویت واحد (Login / Register با PIN Code)
         // =========================================================================
         function switchAuthMode(mode) {
             authMode = mode;
             document.getElementById('authErrorMsg').classList.add('hidden');
             if (mode === 'login') {
-                document.getElementById('authTabLogin').className = "py-2.5 rounded-lg bg-indigo-600 text-white transition";
-                document.getElementById('authTabRegister').className = "py-2.5 rounded-lg text-slate-400 transition";
+                document.getElementById('authTabLogin').className = "py-2.5 rounded-lg bg-indigo-600 text-white transition shadow";
+                document.getElementById('authTabRegister').className = "py-2.5 rounded-lg text-slate-400 hover:text-slate-200 transition";
                 document.getElementById('authSubmitBtn').innerText = "🚀 ورود به پنل واحد";
             } else {
-                document.getElementById('authTabRegister').className = "py-2.5 rounded-lg bg-emerald-600 text-white transition";
-                document.getElementById('authTabLogin').className = "py-2.5 rounded-lg text-slate-400 transition";
+                document.getElementById('authTabRegister').className = "py-2.5 rounded-lg bg-emerald-600 text-white transition shadow";
+                document.getElementById('authTabLogin').className = "py-2.5 rounded-lg text-slate-400 hover:text-slate-200 transition";
                 document.getElementById('authSubmitBtn').innerText = "✨ ساخت واحد جدید و ورود";
             }
         }
@@ -476,7 +666,7 @@
                 }
             } catch (e) {
                 console.error("Supabase Auth Error:", e);
-                errEl.innerText = `⚠️ خطای دیتابیس: ${e.message || 'عدم دسترسی به جدول units'}`;
+                errEl.innerText = `⚠️ خطای دیتابیس: ${e.message || 'مشکل در ارتباط با سرور'}`;
                 errEl.classList.remove('hidden');
             } finally {
                 btn.disabled = false;
@@ -491,6 +681,10 @@
             const presetSelect = document.getElementById('spacePresetSelect');
             if (presetSelect) presetSelect.value = currentPreset;
             
+            // تنظیم منطقه خواب بر اساس نوع واحد
+            const validZones = getValidZones();
+            selectedSleepZone = validZones[0];
+
             localStorage.setItem('KHABGAH_SESSION_V1', JSON.stringify({ roomId, pinCode }));
             
             document.getElementById('currentRoomDisplay').innerText = `واحد ${roomId}`;
@@ -514,11 +708,12 @@
         }
 
         // =========================================================================
-        // ۳. دریافت و همگام‌سازی اطلاعات اختصاصی هر واحد با Supabase
+        // ۵. دریافت و همگام‌سازی اطلاعات اختصاصی هر واحد با Supabase
         // =========================================================================
         async function loadCloudData(showSyncToast = false) {
             if (!CURRENT_ROOM) return;
             try {
+                // دریافت اعضا
                 const { data: memData, error: memErr } = await supabaseClient
                     .from('members')
                     .select('*')
@@ -530,7 +725,7 @@
                 members = (memData || []).map(m => ({
                     id: m.id,
                     name: m.name,
-                    sleepZone: m.sleep_zone,
+                    sleepZone: currentPreset === 'single_room' ? "کل فضای اتاق مشترک" : (m.sleep_zone || "اتاق ۱"),
                     isSenior: m.is_senior || false,
                     daysAgo: m.days_ago || 0,
                     cycleLimit: m.cycle_limit || 9,
@@ -538,6 +733,7 @@
                     points: m.points || 0
                 }));
 
+                // دریافت نوبت‌ها
                 const { data: taskData, error: taskErr } = await supabaseClient
                     .from('tasks')
                     .select('*')
@@ -550,16 +746,18 @@
                     id: t.id,
                     memberId: t.member_id,
                     memberName: t.member_name,
-                    sleepZone: t.sleep_zone,
+                    sleepZone: currentPreset === 'single_room' ? "کل فضای اتاق مشترک" : (t.sleep_zone || "اتاق ۱"),
                     partnerName: t.partner_name,
                     area: t.area,
-                    date: t.date,
-                    start: t.start_time,
-                    end: t.end_time,
+                    date: t.date || "",
+                    start: t.start_time || "12:00",
+                    end: t.end_time || "14:00",
                     status: t.status,
                     score: t.score || 0,
                     pendingStar: t.pending_star || 0,
-                    hasVoted: t.has_voted || false
+                    hasVoted: t.has_voted || false,
+                    photoBefore: t.photo_before || null,
+                    photoAfter: t.photo_after || null
                 }));
 
                 renderAll();
@@ -571,7 +769,7 @@
         }
 
         // =========================================================================
-        // ۴. مدیریت اعضا، اتاق‌ها و ارشدها (با مدیریت خطای کامل)
+        // ۶. مدیریت اعضا، سقف ۱۲ نفر و تطبیق اتاق‌ها (موارد ۴، ۹ و ۱۱)
         // =========================================================================
         function getZoneCount(zoneName, excludeMemberId = null) {
             return members.filter(m => m.sleepZone === zoneName && m.id !== excludeMemberId).length;
@@ -581,16 +779,35 @@
             const container = document.getElementById('sleepZoneButtonsGrid');
             if (!container) return;
 
-            container.innerHTML = VALID_ZONES.map(zone => {
+            const validZones = getValidZones();
+            const maxCap = getMaxZoneCapacity();
+
+            if (!validZones.includes(selectedSleepZone)) {
+                selectedSleepZone = validZones[0];
+            }
+
+            // به‌روزرسانی زیرنویس راهنما بر اساس نوع واحد
+            const subtitleEl = document.getElementById('zoneSubtitleHint');
+            if (subtitleEl) {
+                subtitleEl.innerText = currentPreset === 'full_suite'
+                    ? "ظرفیت کل واحد: حداکثر ۱۲ نفر (۴ نفر در هر اتاق یا پذیرایی)"
+                    : "ظرفیت کل اتاق مشترک: حداکثر ۱۲ نفر";
+            }
+
+            container.className = currentPreset === 'full_suite' 
+                ? "grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs" 
+                : "grid grid-cols-1 gap-2 text-xs";
+
+            container.innerHTML = validZones.map(zone => {
                 const count = getZoneCount(zone);
-                const isFull = count >= MAX_ZONE_CAPACITY;
+                const isFull = count >= maxCap;
                 const isSelected = selectedSleepZone === zone;
 
                 return `
                     <button type="button" onclick="selectSleepZone('${zone}')" 
                         class="p-2.5 rounded-xl border text-right transition flex justify-between items-center ${isSelected ? 'bg-indigo-600 border-indigo-400 text-white font-bold shadow-md' : (isFull ? 'bg-rose-950/30 border-rose-500/40 text-rose-300' : 'bg-slate-900 border-slate-700 text-slate-300')}">
                         <span>${zone === 'پذیرایی' ? '🛋️' : '🛏️'} ${zone}</span>
-                        <span class="text-[10px] px-1.5 py-0.5 rounded ${isFull ? 'bg-rose-600 text-white font-black' : 'bg-slate-800 text-slate-300'}">${count}/${MAX_ZONE_CAPACITY}</span>
+                        <span class="text-[10px] px-1.5 py-0.5 rounded ${isFull ? 'bg-rose-600 text-white font-black' : 'bg-slate-800 text-slate-300'}">${count}/${maxCap}</span>
                     </button>
                 `;
             }).join('');
@@ -598,8 +815,9 @@
 
         function selectSleepZone(zone) {
             const errEl = document.getElementById('zoneCapacityError');
-            if (getZoneCount(zone) >= MAX_ZONE_CAPACITY) {
-                errEl.innerText = `⛔ ظرفیت «${zone}» تکمیل است (حداکثر ۴ نفر)!`;
+            const maxCap = getMaxZoneCapacity();
+            if (getZoneCount(zone) >= maxCap) {
+                errEl.innerText = `⛔ ظرفیت «${zone}» تکمیل است (حداکثر ${maxCap} نفر)!`;
                 errEl.classList.remove('hidden');
                 return;
             }
@@ -608,11 +826,12 @@
             renderZoneCapacityButtons();
         }
 
-        // تابع اصلاح‌شده افزودن عضو با قابلیت هندلینگ کامل خطا
+        // افزودن عضو جدید با بررسی سقف ۱۲ نفر (مورد ۴)
         async function addMember() {
             const inp = document.getElementById('memberNameInput');
             const name = inp.value.trim();
             const errEl = document.getElementById('memberNameError');
+            const capErrEl = document.getElementById('zoneCapacityError');
             
             if (!name) {
                 if (errEl) errEl.classList.remove('hidden');
@@ -621,10 +840,23 @@
             }
             if (errEl) errEl.classList.add('hidden');
 
-            if (getZoneCount(selectedSleepZone) >= MAX_ZONE_CAPACITY) {
-                showToast(`⛔ ظرفیت ${selectedSleepZone} تکمیل است (حداکثر ۴ نفر)!`, "⚠️");
+            // ۱. کنترل سخت‌گیرانه ظرفیت کل واحد (حداکثر ۱۲ نفر)
+            if (members.length >= MAX_TOTAL_UNIT_MEMBERS) {
+                capErrEl.innerText = "⛔ ظرفیت کل این واحد تکمیل شده است (حداکثر ۱۲ نفر مجاز است و امکان افزودن نفر سیزدهم وجود ندارد)!";
+                capErrEl.classList.remove('hidden');
+                showToast("⛔ ظرفیت نهایی واحد (۱۲ نفر) تکمیل است!", "⚠️");
                 return;
             }
+
+            // ۲. کنترل ظرفیت بخش انتخابی
+            const maxCap = getMaxZoneCapacity();
+            if (getZoneCount(selectedSleepZone) >= maxCap) {
+                capErrEl.innerText = `⛔ ظرفیت «${selectedSleepZone}» تکمیل است (حداکثر ${maxCap} نفر)! لطفاً بخش دیگری را انتخاب کنید.`;
+                capErrEl.classList.remove('hidden');
+                showToast(`ظرفیت ${selectedSleepZone} تکمیل است!`, "⛔");
+                return;
+            }
+            capErrEl.classList.add('hidden');
 
             const newMember = {
                 room_id: CURRENT_ROOM,
@@ -650,21 +882,32 @@
             showToast(`${name} با موفقیت به واحد اضافه شد!`, "👤");
         }
 
-        // تابع اصلاح‌شده ثبت گروهی اعضا
+        // ثبت گروهی اعضا با رعایت سقف ۱۲ نفر (مورد ۴)
         async function addBulkMembers() {
             const raw = document.getElementById('bulkMembersInput').value.trim();
             if (!raw) return;
-            const list = raw.split(/[،,\-\n]+/).map(s => s.trim()).filter(Boolean);
-            
-            const payload = [];
-            let tempZones = {
-                "اتاق ۱": getZoneCount("اتاق ۱"),
-                "اتاق ۲": getZoneCount("اتاق ۲"),
-                "پذیرایی": getZoneCount("پذیرایی")
-            };
 
+            if (members.length >= MAX_TOTAL_UNIT_MEMBERS) {
+                showToast("⛔ ظرفیت کل واحد (۱۲ نفر) تکمیل است و امکان افزودن عضو جدید نیست!", "⚠️");
+                return;
+            }
+
+            const list = raw.split(/[،,\-\n]+/).map(s => s.trim()).filter(Boolean);
+            const remainingSlots = MAX_TOTAL_UNIT_MEMBERS - members.length;
+
+            if (list.length > remainingSlots) {
+                showToast(`⚠️ تنها ${remainingSlots} جای خالی تا سقف ۱۲ نفر باقی مانده است!`, "⛔");
+                return;
+            }
+
+            const validZones = getValidZones();
+            const maxCap = getMaxZoneCapacity();
+            let tempZones = {};
+            validZones.forEach(z => tempZones[z] = getZoneCount(z));
+
+            const payload = [];
             list.forEach((n, i) => {
-                const availableZone = VALID_ZONES.find(z => tempZones[z] < MAX_ZONE_CAPACITY) || "پذیرایی";
+                const availableZone = validZones.find(z => tempZones[z] < maxCap) || validZones[0];
                 tempZones[availableZone]++;
                 payload.push({
                     room_id: CURRENT_ROOM,
@@ -681,13 +924,12 @@
             if (payload.length > 0) {
                 const { error } = await supabaseClient.from('members').insert(payload);
                 if (error) {
-                    console.error("خطای ثبت گروهی اعضا:", error);
                     showToast(`❌ خطا در ثبت گروهی: ${error.message}`, "⚠️");
                     return;
                 }
                 document.getElementById('bulkMembersInput').value = "";
                 await loadCloudData();
-                showToast("اعضا با موفقیت در واحد ثبت شدند!", "🎉");
+                showToast(`${payload.length} عضو با موفقیت در واحد ثبت شدند!`, "🎉");
             }
         }
 
@@ -703,8 +945,9 @@
         }
 
         async function updateMemberZone(memberId, newZone) {
-            if (getZoneCount(newZone, memberId) >= MAX_ZONE_CAPACITY) {
-                showToast(`⛔ ظرفیت «${newZone}» تکمیل است (حداکثر ۴ نفر)!`, "⚠️");
+            const maxCap = getMaxZoneCapacity();
+            if (getZoneCount(newZone, memberId) >= maxCap) {
+                showToast(`⛔ ظرفیت «${newZone}» تکمیل است (حداکثر ${maxCap} نفر)!`, "⚠️");
                 renderAll();
                 return;
             }
@@ -740,8 +983,22 @@
         }
 
         // =========================================================================
-        // ۵. مدیریت نوبت‌ها، تحویل کار، جایگزینی و امتیازدهی (در دیتابیس ابری)
+        // ۷. ثبت نوبت با جلوگیری از تداخل زمانی و تحویل کار با چک‌لیست اجباری (موارد ۱، ۳، ۷، ۸، ۱۰)
         // =========================================================================
+        function checkScheduleCollision(date, area, startStr, endStr) {
+            const newStart = timeToMinutes(startStr);
+            const newEnd = timeToMinutes(endStr);
+
+            return tasks.find(t => {
+                if (t.status !== 'todo') return false;
+                if (t.date !== date || t.area !== area) return false;
+                const existStart = timeToMinutes(t.start);
+                const existEnd = timeToMinutes(t.end);
+                // شرط همپوشانی دو بازه زمانی: (StartA < EndB) و (EndA > StartB)
+                return (newStart < existEnd && newEnd > existStart);
+            });
+        }
+
         async function handleTaskSubmission() {
             const memberId = parseInt(document.getElementById('memberSelect').value);
             const member = members.find(m => m.id === memberId);
@@ -754,12 +1011,23 @@
             const date = document.getElementById('dateInput').value.trim();
             const start = document.getElementById('startTimeInput').value;
             const end = document.getElementById('endTimeInput').value;
+            const errEl = document.getElementById('dateTimeError');
 
             if (!date || !validate24HourRange()) {
-                document.getElementById('dateTimeError').innerText = "⚠️ لطفاً تاریخ و بازه زمانی معتبر انتخاب کنید!";
-                document.getElementById('dateTimeError').classList.remove('hidden');
+                errEl.innerText = "⚠️ لطفاً تاریخ را از تقویم انتخاب کرده و بازه ساعتی معتبر وارد کنید!";
+                errEl.classList.remove('hidden');
                 return;
             }
+
+            // بررسی تداخل زمانی برای یک مکان در یک روز و ساعت (رفع مورد ۸)
+            const conflictingTask = checkScheduleCollision(date, area, start, end);
+            if (conflictingTask) {
+                errEl.innerText = `⛔ تداخل زمانی! بخش «${area}» در تاریخ ${date} از ساعت ${conflictingTask.start} تا ${conflictingTask.end} قبلاً توسط «${conflictingTask.memberName}» رزرو شده است.`;
+                errEl.classList.remove('hidden');
+                showToast(`⛔ تداخل! ${area} در این ساعت توسط ${conflictingTask.memberName} رزرو شده است.`, "⚠️");
+                return;
+            }
+            errEl.classList.add('hidden');
 
             const newTask = {
                 room_id: CURRENT_ROOM,
@@ -785,96 +1053,190 @@
             
             toggleDrawer('newSlotDrawer', 'newSlotDrawerIcon', false);
             await loadCloudData();
-            showToast("نوبت نظافت در واحد ثبت شد!", "🚀");
+            showToast("نوبت نظافت با موفقیت در صف واحد ثبت شد!", "🚀");
         }
 
         async function deleteTask(id) {
             await supabaseClient.from('tasks').delete().eq('id', id).eq('room_id', CURRENT_ROOM);
             await loadCloudData();
-            showToast("نوبت حذف شد.", "🗑️");
+            showToast("نوبت از جدول حذف شد.", "🗑️");
         }
 
+        // باز کردن مودال تحویل کار با چک‌لیست اختصاصی هر بخش
         function openVerifyModal(taskId) {
             activeVerifyId = taskId;
-            verifyPhotosState = { before: false, after: false };
+            verifyPhotosData = { before: null, after: null };
+            
             document.getElementById('beforePreview').classList.add('hidden');
             document.getElementById('afterPreview').classList.add('hidden');
             document.getElementById('beforeClearBtn').classList.add('hidden');
             document.getElementById('afterClearBtn').classList.add('hidden');
-            document.getElementById('checklistContainer').innerHTML = ["تمیز کردن کامل سطح و کف", "خالی کردن سطل زباله و نظم‌دهی"].map(item => `
-                <label class="flex items-center gap-2 cursor-pointer bg-slate-900 p-2 rounded-xl"><input type="checkbox" class="w-4 h-4 accent-emerald-500 rounded"><span>${item}</span></label>
+            document.getElementById('checklistErrorMsg').classList.add('hidden');
+            document.getElementById('beforeInput').value = "";
+            document.getElementById('afterInput').value = "";
+
+            const t = tasks.find(x => x.id === taskId);
+            const items = (t && AREA_CHECKLISTS[t.area]) ? AREA_CHECKLISTS[t.area] : [
+                "تمیز کردن و شستشوی کامل سطح و کف بخش",
+                "گردگیری، نظم‌دهی و مرتب‌سازی وسایل",
+                "تخلیه کامل سطل زباله و تعویض کیسه"
+            ];
+
+            document.getElementById('checklistContainer').innerHTML = items.map(item => `
+                <label class="flex items-center gap-2.5 cursor-pointer bg-slate-900 hover:bg-slate-800/80 p-2.5 rounded-xl border border-slate-800 transition">
+                    <input type="checkbox" onchange="document.getElementById('checklistErrorMsg').classList.add('hidden')" class="verify-chk-item w-4 h-4 accent-emerald-500 rounded shrink-0">
+                    <span class="leading-relaxed">${item}</span>
+                </label>
             `).join('');
+
             document.getElementById('verifyModal').classList.remove('hidden');
         }
 
-        function closeVerifyModal() { document.getElementById('verifyModal').classList.add('hidden'); }
-
-        function clearSelectedPhoto(type) {
-            verifyPhotosState[type] = false;
-            document.getElementById(`${type}Preview`).classList.add('hidden');
-            document.getElementById(`${type}ClearBtn`).classList.add('hidden');
+        function closeVerifyModal() {
+            document.getElementById('verifyModal').classList.add('hidden');
         }
 
+        function clearSelectedPhoto(type) {
+            verifyPhotosData[type] = null;
+            document.getElementById(`${type}Preview`).classList.add('hidden');
+            document.getElementById(`${type}ClearBtn`).classList.add('hidden');
+            document.getElementById(`${type}Input`).value = "";
+        }
+
+        // فشرده‌سازی هوشمند عکس روی Canvas برای ذخیره در دیتابیس و نمایش به سایر اعضا (مورد ۳)
         function handlePhoto(event, type) {
             const file = event.target.files[0];
             if (!file) return;
-            verifyPhotosState[type] = true;
             const reader = new FileReader();
             reader.onload = e => {
-                const img = document.getElementById(`${type}Preview`);
+                const img = new Image();
+                img.onload = () => {
+                    const canvas = document.createElement('canvas');
+                    const maxW = 480;
+                    const scale = Math.min(1, maxW / img.width);
+                    canvas.width = img.width * scale;
+                    canvas.height = img.height * scale;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                    
+                    const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.65);
+                    verifyPhotosData[type] = compressedDataUrl;
+
+                    const previewEl = document.getElementById(`${type}Preview`);
+                    previewEl.src = compressedDataUrl;
+                    previewEl.classList.remove('hidden');
+                    document.getElementById(`${type}ClearBtn`).classList.remove('hidden');
+                };
                 img.src = e.target.result;
-                img.classList.remove('hidden');
-                document.getElementById(`${type}ClearBtn`).classList.remove('hidden');
             };
             reader.readAsDataURL(file);
         }
 
+        // ثبت نهایی تحویل کار: چک‌لیست ۱۰۰٪ اجباری + عکس اختیاری (رفع کامل مورد ۱)
         async function submitVerification() {
-            if (!verifyPhotosState.before || !verifyPhotosState.after) {
-                showToast("لطفاً هر دو عکس قبل و بعد را انتخاب کنید!", "⚠️");
+            const checkboxes = document.querySelectorAll('.verify-chk-item');
+            const allChecked = checkboxes.length > 0 && Array.from(checkboxes).every(cb => cb.checked);
+
+            if (!allChecked) {
+                document.getElementById('checklistErrorMsg').classList.remove('hidden');
+                showToast("⛔ تکمیل و علامت زدن تمام موارد چک‌لیست الزامی است!", "⚠️");
                 return;
             }
-            const t = tasks.find(x => x.id === activeVerifyId);
-            if (t) {
-                await supabaseClient.from('tasks').update({ status: 'done' }).eq('id', t.id).eq('room_id', CURRENT_ROOM);
-                const m = members.find(x => x.id === t.memberId);
-                if (m) {
-                    const areas = getAreas();
-                    await supabaseClient.from('members').update({
-                        days_ago: 0,
-                        points: m.points + 10,
-                        last_area_idx: (m.lastAreaIdx + 1) % areas.length
-                    }).eq('id', m.id).eq('room_id', CURRENT_ROOM);
+
+            const btn = document.getElementById('verifySubmitBtn');
+            btn.disabled = true;
+            btn.innerText = "⏳ در حال ثبت...";
+
+            try {
+                const t = tasks.find(x => x.id === activeVerifyId);
+                if (t) {
+                    const updatePayload = { status: 'done' };
+                    if (verifyPhotosData.before) updatePayload.photo_before = verifyPhotosData.before;
+                    if (verifyPhotosData.after) updatePayload.photo_after = verifyPhotosData.after;
+
+                    const { error: upErr } = await supabaseClient
+                        .from('tasks')
+                        .update(updatePayload)
+                        .eq('id', t.id)
+                        .eq('room_id', CURRENT_ROOM);
+
+                    // اگر ستون عکس در دیتابیس ساخته نشده بود، بدون عکس وضعیت را ذخیره کن تا کار متوقف نشود
+                    if (upErr) {
+                        await supabaseClient.from('tasks').update({ status: 'done' }).eq('id', t.id).eq('room_id', CURRENT_ROOM);
+                    }
+
+                    const m = members.find(x => x.id === t.memberId);
+                    if (m) {
+                        const areas = getAreas();
+                        await supabaseClient.from('members').update({
+                            days_ago: 0,
+                            points: m.points + 10,
+                            last_area_idx: (m.lastAreaIdx + 1) % areas.length
+                        }).eq('id', m.id).eq('room_id', CURRENT_ROOM);
+                    }
                 }
+                closeVerifyModal();
+                triggerCelebration();
+                await loadCloudData();
+                showToast("خسته نباشید! نظافت تحویل داده شد و +۱۰ امتیاز دریافت کردید!", "🎉");
+            } catch (e) {
+                showToast("خطا در ثبت تحویل کار!", "⚠️");
+            } finally {
+                btn.disabled = false;
+                btn.innerText = "ثبت نهایی نظافت ✔️";
             }
-            closeVerifyModal();
-            await loadCloudData();
-            showToast("نظافت تحویل داده شد و +۱۰ امتیاز ثبت گردید!", "🎉");
         }
 
+        // باز کردن گالری مشاهده عکس‌های قبل و بعد برای هم‌اتاقی‌ها (مورد ۳)
+        function openPhotoGallery(taskId) {
+            const t = tasks.find(x => x.id === taskId);
+            if (!t) return;
+
+            if (!t.photoBefore && !t.photoAfter) {
+                showToast("برای این نظافت عکسی آپلود نشده است (تحویل با چک‌لیست).", "📷");
+                return;
+            }
+
+            const placeholderImg = "https://placehold.co/400x300/0f172a/64748b?text=%D8%A8%D8%AF%D9%88%D9%86+%D8%AA%D8%B5%D9%88%DB%8C%D8%B1";
+            document.getElementById('galleryTitle').innerText = `📸 تصاویر نظافت ${t.area} (${t.memberName})`;
+            document.getElementById('galleryBeforeImg').src = t.photoBefore || placeholderImg;
+            document.getElementById('galleryAfterImg').src = t.photoAfter || placeholderImg;
+            document.getElementById('photoGalleryModal').classList.remove('hidden');
+        }
+
+        function closePhotoGallery() {
+            document.getElementById('photoGalleryModal').classList.add('hidden');
+        }
+
+        // انتخاب ستاره و قفل/حذف خودکار مورد پس از ثبت امتیاز (مورد ۱۰)
         async function selectPendingStar(taskId, stars) {
             const t = tasks.find(x => x.id === taskId);
             if (t && !t.hasVoted) {
+                t.pendingStar = stars;
+                renderAll();
                 await supabaseClient.from('tasks').update({ pending_star: stars }).eq('id', taskId).eq('room_id', CURRENT_ROOM);
-                await loadCloudData();
             }
         }
 
         async function confirmAndLockVote(taskId) {
             const t = tasks.find(x => x.id === taskId);
-            if (t && !t.hasVoted && t.pendingStar > 0) {
-                await supabaseClient.from('tasks').update({
-                    score: t.pendingStar,
-                    has_voted: true
-                }).eq('id', taskId).eq('room_id', CURRENT_ROOM);
-
-                const m = members.find(x => x.id === t.memberId);
-                if (m) {
-                    await supabaseClient.from('members').update({ points: m.points + t.pendingStar }).eq('id', m.id).eq('room_id', CURRENT_ROOM);
-                }
-                await loadCloudData();
-                showToast("امتیاز کیفیت ثبت و قفل شد!", "🔒");
+            if (!t || t.hasVoted) return;
+            if (!t.pendingStar || t.pendingStar < 1) {
+                showToast("لطفاً ابتدا تعداد ستاره (۱ تا ۵) را انتخاب کنید!", "⭐");
+                return;
             }
+
+            await supabaseClient.from('tasks').update({
+                score: t.pendingStar,
+                has_voted: true
+            }).eq('id', taskId).eq('room_id', CURRENT_ROOM);
+
+            const m = members.find(x => x.id === t.memberId);
+            if (m) {
+                await supabaseClient.from('members').update({ points: m.points + t.pendingStar }).eq('id', m.id).eq('room_id', CURRENT_ROOM);
+            }
+            await loadCloudData();
+            showToast(`امتیاز +${t.pendingStar} ستاره برای ${t.memberName} ثبت شد!`, "🌟");
         }
 
         function openTakeover(taskId) {
@@ -896,6 +1258,7 @@
 
                 await supabaseClient.from('members').update({ points: v.points + 15 }).eq('id', v.id).eq('room_id', CURRENT_ROOM);
                 document.getElementById('takeoverModal').classList.add('hidden');
+                triggerCelebration();
                 await loadCloudData();
                 showToast(`جایگزینی ثبت شد و +۱۵ امتیاز به ${v.name} تعلق گرفت!`, "🤝");
             }
@@ -908,14 +1271,22 @@
                     points: m.points - 50,
                     cycle_limit: m.cycleLimit + 9
                 }).eq('id', id).eq('room_id', CURRENT_ROOM);
+                triggerCelebration();
                 await loadCloudData();
-                showToast("پاداش معافیت ۱ دوره کامل فعال شد!", "🎁");
+                showToast("پاداش معافیت ۱ دوره کامل با موفقیت فعال شد!", "🎁");
+            } else {
+                showToast("برای دریافت معافیت حداقل ۵۰ امتیاز نیاز است.", "⚠️");
             }
         }
 
         // =========================================================================
-        // ۶. توابع کمکی رابط کاربری و رندرینگ (UI & Rendering)
+        // ۸. توابع رابط کاربری، کشوهای «نمایش بیشتر» و رندرینگ (UI & Rendering)
         // =========================================================================
+        function toggleSectionLimit(sectionKey) {
+            expandedSections[sectionKey] = !expandedSections[sectionKey];
+            renderAll();
+        }
+
         function toggleDrawer(drawerId, iconId, forceOpen = null) {
             const drawer = document.getElementById(drawerId);
             const icon = document.getElementById(iconId);
@@ -950,6 +1321,7 @@
         }
 
         function timeToMinutes(timeStr) {
+            if (!timeStr || !timeStr.includes(':')) return 0;
             const [hours, minutes] = timeStr.split(':').map(Number);
             return (hours * 60) + minutes;
         }
@@ -968,13 +1340,22 @@
             return true;
         }
 
+        // تغییر الگوی واحد (واحد کامل <-> اتاق مشترک) با تطبیق کامل اتاق‌ها (مورد ۱۱)
         async function changeSpacePreset() {
             currentPreset = document.getElementById('spacePresetSelect').value;
+            const validZones = getValidZones();
+            selectedSleepZone = validZones[0];
+
             if (CURRENT_ROOM) {
                 await supabaseClient.from('units').update({ preset: currentPreset }).eq('room_id', CURRENT_ROOM);
             }
-            renderAll();
-            showToast("الگوی فضای واحد تغییر کرد!", "🏠");
+            await loadCloudData();
+            showToast(
+                currentPreset === 'full_suite' 
+                    ? "الگوی «واحد کامل (چند اتاقه)» فعال شد." 
+                    : "الگوی «اتاق مشترک (تک‌فضا بدون اتاق ۱ و ۲)» فعال شد.", 
+                "🏠"
+            );
         }
 
         function getAreas() {
@@ -998,6 +1379,7 @@
             if (!member) return;
             const areas = getAreas();
             document.getElementById('areaSelect').value = areas[(member.lastAreaIdx + 1) % areas.length];
+            checkCoopEligibility();
         }
 
         function checkCoopEligibility() {
@@ -1007,11 +1389,11 @@
             else { box.classList.add('hidden'); document.getElementById('partnerSelect').value = ""; }
         }
 
-        function applyQuickSlot(date, start, end) {
-            document.getElementById('dateInput').value = date;
+        function applyQuickSlot(start, end) {
             document.getElementById('startTimeInput').value = start;
             document.getElementById('endTimeInput').value = end;
-            showToast("زمان پیشنهادی انتخاب شد.", "⚡");
+            validate24HourRange();
+            showToast(`بازه زمانی ${start} تا ${end} تنظیم شد.`, "⚡");
         }
 
         function renderAll() {
@@ -1021,71 +1403,160 @@
             document.getElementById('membersCountBadge').innerText = members.length;
 
             const areas = getAreas();
+            const validZones = getValidZones();
             
-            // ۱. وضعیت سیکل اعضا
+            // ۱. وضعیت سیکل اعضا (محدود به ۴ نفر در حالت پیش‌فرض + دکمه بیشتر - مورد ۵)
             const cycleBarEl = document.getElementById('cycleBar');
             if (members.length === 0) {
                 cycleBarEl.innerHTML = `<div class="col-span-full text-center py-4 text-xs text-slate-400">هنوز عضوی در این واحد ثبت نشده است. از تب «اعضا و اتاق‌ها» اعضای واحد را اضافه کنید.</div>`;
             } else {
-                cycleBarEl.innerHTML = members.map(m => `
-                    <div class="p-2.5 rounded-xl border ${m.daysAgo >= 8 ? 'bg-rose-950/40 border-rose-500/60' : 'bg-slate-900 border-slate-800'} text-xs flex flex-col justify-between">
-                        <div class="flex justify-between items-center"><strong class="text-white text-[11px] truncate">${m.isSenior ? '👑 ' : ''}${m.name}</strong><span class="text-[9px] bg-slate-800 text-indigo-300 px-1 py-0.5 rounded shrink-0">${m.sleepZone}</span></div>
-                        <div class="flex justify-between items-center mt-1 pt-1 border-t border-slate-800 text-[10px]"><span class="font-bold ${m.daysAgo >= 8 ? 'text-rose-400' : 'text-emerald-400'}">${m.daysAgo} روز پیش</span><span class="truncate max-w-[90px]">بعدی: ${areas[(m.lastAreaIdx+1)%areas.length]}</span></div>
+                const visibleCycle = expandedSections.cycle ? members : members.slice(0, 4);
+                let cycleHtml = visibleCycle.map(m => `
+                    <div class="p-2.5 rounded-xl border ${m.daysAgo >= 8 ? 'bg-rose-950/40 border-rose-500/60 urgent-glow' : 'bg-slate-900 border-slate-800'} text-xs flex flex-col justify-between animate-card">
+                        <div class="flex justify-between items-center gap-1">
+                            <strong class="text-white text-[11px] truncate">${m.isSenior ? '👑 ' : ''}${m.name}</strong>
+                            <span class="text-[9px] bg-slate-800 text-indigo-300 px-1.5 py-0.5 rounded shrink-0">${m.sleepZone}</span>
+                        </div>
+                        <div class="flex justify-between items-center mt-1.5 pt-1 border-t border-slate-800/80 text-[10px]">
+                            <span class="font-bold ${m.daysAgo >= 8 ? 'text-rose-400' : 'text-emerald-400'}">${m.daysAgo} روز پیش</span>
+                            <span class="truncate max-w-[95px] text-slate-300">بعدی: ${areas[(m.lastAreaIdx+1)%areas.length]}</span>
+                        </div>
                     </div>
                 `).join('');
+
+                if (members.length > 4) {
+                    cycleHtml += `
+                        <div class="col-span-full pt-1">
+                            <button onclick="toggleSectionLimit('cycle')" class="w-full py-2 bg-slate-800/70 hover:bg-slate-800 text-indigo-300 text-xs font-bold rounded-xl border border-slate-700 transition">
+                                ${expandedSections.cycle ? '▲ بستن و نمایش کمتر' : `▼ نمایش بیشتر (${members.length - 4} نفر دیگر)`}
+                            </button>
+                        </div>
+                    `;
+                }
+                cycleBarEl.innerHTML = cycleHtml;
             }
 
-            // ۲. لیست نوبت‌های در صف و انجام شده
-            const todo = tasks.filter(t => t.status === 'todo');
-            const done = tasks.filter(t => t.status === 'done');
-            document.getElementById('todoCount').innerText = todo.length;
-            document.getElementById('doneCount').innerText = done.length;
+            // ۲. لیست نوبت‌های در صف انجام (مرتب‌شده بر اساس نزدیک‌ترین تاریخ و ساعت + محدود به ۳ مورد - موارد ۶ و ۷)
+            const sortedTodo = tasks
+                .filter(t => t.status === 'todo')
+                .sort((a, b) => {
+                    const dComp = (a.date || "").localeCompare(b.date || "");
+                    if (dComp !== 0) return dComp;
+                    return timeToMinutes(a.start) - timeToMinutes(b.start);
+                });
 
-            document.getElementById('todoContainer').innerHTML = todo.length === 0 ? `<div class="text-center py-5 text-xs text-slate-500">نوبتی در صف انجام نیست.</div>` : todo.map((t, idx) => `
-                <div class="bg-slate-900 border border-slate-800 p-3 rounded-2xl space-y-2">
-                    <div class="flex justify-between items-start"><strong class="text-xs text-white">#${idx+1} - ${t.memberName} (${t.sleepZone})${t.partnerName ? ` + 👥 ${t.partnerName}` : ''}</strong><span class="text-[11px] font-bold bg-emerald-500/15 text-emerald-300 px-2 py-0.5 rounded-lg">${t.area}</span></div>
-                    <div class="flex justify-between items-center bg-slate-950 p-2 rounded-xl text-xs"><span>📅 ${t.date} | ⏰ ${t.start} تا ${t.end}</span><button onclick="deleteTask(${t.id})" class="text-rose-400 font-bold text-xs">🗑️ حذف</button></div>
-                    <div class="grid grid-cols-2 gap-2"><button onclick="openTakeover(${t.id})" class="bg-amber-500/15 text-amber-300 py-1.5 rounded-xl text-xs font-bold">🤝 جایگزینی</button><button onclick="openVerifyModal(${t.id})" class="bg-emerald-600 text-white py-1.5 rounded-xl text-xs font-bold">📸 تحویل کار</button></div>
-                </div>
-            `).join('');
+            document.getElementById('todoCount').innerText = sortedTodo.length;
 
-            // ۳. کارت اعضای واحد (به همراه دکمه حذف و تغییر اتاق)
+            if (sortedTodo.length === 0) {
+                document.getElementById('todoContainer').innerHTML = `<div class="text-center py-5 text-xs text-slate-500">نوبتی در صف انجام نیست.</div>`;
+            } else {
+                const visibleTodo = expandedSections.todo ? sortedTodo : sortedTodo.slice(0, 3);
+                let todoHtml = visibleTodo.map((t, idx) => `
+                    <div class="bg-slate-900 border ${idx === 0 ? 'border-indigo-500/50' : 'border-slate-800'} p-3 rounded-2xl space-y-2 animate-card">
+                        <div class="flex justify-between items-start gap-2">
+                            <div class="flex items-center gap-1.5 flex-wrap">
+                                <span class="text-[10px] font-black px-2 py-0.5 rounded-md ${idx === 0 ? 'bg-indigo-600 text-white' : 'bg-slate-800 text-slate-300'}">${idx === 0 ? '⚡ نزدیک‌ترین نوبت' : `نوبت #${idx + 1}`}</span>
+                                <strong class="text-xs text-white">${t.memberName} (${t.sleepZone})${t.partnerName ? ` + 👥 ${t.partnerName}` : ''}</strong>
+                            </div>
+                            <span class="text-[11px] font-bold bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 px-2 py-0.5 rounded-lg shrink-0">${t.area}</span>
+                        </div>
+                        <div class="flex justify-between items-center bg-slate-950 p-2 rounded-xl text-xs border border-slate-800/80">
+                            <span class="text-slate-200 font-bold">📅 ${t.date} | ⏰ ${t.start} تا ${t.end}</span>
+                            <button onclick="deleteTask(${t.id})" class="text-rose-400 hover:text-rose-300 font-bold text-xs">🗑️ حذف</button>
+                        </div>
+                        <div class="grid grid-cols-2 gap-2">
+                            <button onclick="openTakeover(${t.id})" class="bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 border border-amber-500/30 py-2 rounded-xl text-xs font-bold transition">🤝 جایگزینی</button>
+                            <button onclick="openVerifyModal(${t.id})" class="bg-emerald-600 hover:bg-emerald-500 text-white py-2 rounded-xl text-xs font-bold shadow transition">✅ تحویل کار</button>
+                        </div>
+                    </div>
+                `).join('');
+
+                if (sortedTodo.length > 3) {
+                    todoHtml += `
+                        <button onclick="toggleSectionLimit('todo')" class="w-full py-2 bg-slate-800/70 hover:bg-slate-800 text-indigo-300 text-xs font-bold rounded-xl border border-slate-700 transition">
+                            ${expandedSections.todo ? '▲ بستن نوبت‌ها' : `▼ نمایش بیشتر (${sortedTodo.length - 3} نوبت دیگر در صف)`}
+                        </button>
+                    `;
+                }
+                document.getElementById('todoContainer').innerHTML = todoHtml;
+            }
+
+            // ۳. کارت اعضای واحد (محدود به ۴ نفر در حالت پیش‌فرض + دکمه بیشتر - مورد ۹)
             const membersGridEl = document.getElementById('membersGrid');
             if (members.length === 0) {
                 membersGridEl.innerHTML = `<div class="col-span-full text-center py-4 text-xs text-slate-400">لیست اعضای واحد خالی است.</div>`;
             } else {
-                membersGridEl.innerHTML = members.map(m => `
-                    <div class="bg-slate-900 border border-slate-800 p-2.5 rounded-xl text-xs space-y-1.5">
+                const visibleMembers = expandedSections.members ? members : members.slice(0, 4);
+                let memHtml = visibleMembers.map(m => `
+                    <div class="bg-slate-900 border border-slate-800 p-2.5 rounded-xl text-xs space-y-2 animate-card">
                         <div class="flex justify-between items-center">
                             <strong class="text-white truncate">${m.isSenior ? '👑 ' : ''}${m.name}</strong>
                             <button onclick="deleteMember(${m.id})" class="bg-rose-500/15 text-rose-400 hover:bg-rose-500/25 px-2 py-0.5 rounded-lg text-[11px] font-bold transition">🗑️ حذف</button>
                         </div>
                         <select onchange="updateMemberZone(${m.id}, this.value)" class="w-full bg-slate-950 border border-slate-700 text-indigo-300 rounded-lg p-1.5 text-[11px] outline-none">
-                            <option value="اتاق ۱" ${m.sleepZone==='اتاق ۱'?'selected':''}>🛏️ اتاق ۱</option>
-                            <option value="اتاق ۲" ${m.sleepZone==='اتاق ۲'?'selected':''}>🛏️ اتاق ۲</option>
-                            <option value="پذیرایی" ${m.sleepZone==='پذیرایی'?'selected':''}>🛋️ پذیرایی</option>
+                            ${validZones.map(z => `<option value="${z}" ${m.sleepZone === z ? 'selected' : ''}>${z === 'پذیرایی' ? '🛋️' : '🛏️'} ${z}</option>`).join('')}
                         </select>
                     </div>
                 `).join('');
+
+                if (members.length > 4) {
+                    memHtml += `
+                        <div class="col-span-full pt-1">
+                            <button onclick="toggleSectionLimit('members')" class="w-full py-2 bg-slate-800/70 hover:bg-slate-800 text-indigo-300 text-xs font-bold rounded-xl border border-slate-700 transition">
+                                ${expandedSections.members ? '▲ بستن لیست اعضا' : `▼ نمایش بیشتر (${members.length - 4} هم‌اتاقی دیگر)`}
+                            </button>
+                        </div>
+                    `;
+                }
+                membersGridEl.innerHTML = memHtml;
             }
 
-            // ۴. امتیازدهی به نظافت‌های انجام‌شده
-            document.getElementById('doneContainer').innerHTML = done.length === 0 ? `<div class="text-center py-5 text-xs text-slate-500">هنوز نظافتی تحویل داده نشده است.</div>` : done.map(t => `
-                <div class="bg-slate-900 border border-emerald-500/30 p-3 rounded-2xl space-y-2">
-                    <div class="flex justify-between items-center"><strong class="text-xs text-white">${t.memberName} - ${t.area}</strong><span class="text-xs text-amber-300 font-bold">${t.hasVoted ? `🔒 ثبت شده: ${t.score}⭐` : 'در انتظار رای کیفیت'}</span></div>
-                    <div class="bg-slate-950 p-2 rounded-xl flex justify-between items-center gap-2"><div class="flex gap-1">${[1,2,3,4,5].map(s=>`<button onclick="selectPendingStar(${t.id}, ${s})" ${t.hasVoted ? 'disabled' : ''} class="px-2 py-1 rounded text-xs font-bold ${(t.hasVoted ? t.score===s : t.pendingStar===s)?'bg-amber-500 text-slate-950':'bg-slate-800 text-slate-300'}">${s}⭐</button>`).join('')}</div>
-                    ${!t.hasVoted ? `<button onclick="confirmAndLockVote(${t.id})" class="bg-indigo-600 text-white px-3 py-1 rounded-lg text-xs font-bold shrink-0">ثبت نهایی</button>`:''}</div>
-                </div>
-            `).join('');
+            // ۴. امتیازدهی به نظافت‌های انجام‌شده (حذف خودکار پس از ثبت امتیاز + دکمه مشاهده عکس‌ها - موارد ۳ و ۱۰)
+            const unvotedDone = tasks.filter(t => t.status === 'done' && !t.hasVoted);
+            document.getElementById('doneCount').innerText = unvotedDone.length;
+
+            document.getElementById('doneContainer').innerHTML = unvotedDone.length === 0 
+                ? `<div class="text-center py-5 text-xs text-slate-500">تمامی نظافت‌های تحویل‌داده‌شده امتیازدهی شده‌اند ✨</div>` 
+                : unvotedDone.map(t => {
+                    const hasPhotos = Boolean(t.photoBefore || t.photoAfter);
+                    return `
+                        <div class="bg-slate-900 border border-emerald-500/30 p-3 rounded-2xl space-y-2.5 animate-card">
+                            <div class="flex justify-between items-center gap-2">
+                                <div>
+                                    <strong class="text-xs text-white block">${t.memberName} - نظافت ${t.area}</strong>
+                                    <span class="text-[10px] text-slate-400">📅 ${t.date} | تحویل با چک‌لیست کامل</span>
+                                </div>
+                                <button onclick="openPhotoGallery(${t.id})" class="text-[11px] ${hasPhotos ? 'bg-indigo-600/25 text-indigo-300 border-indigo-500/40' : 'bg-slate-800 text-slate-400 border-slate-700'} border px-2.5 py-1.5 rounded-xl font-bold shrink-0 transition">
+                                    📸 ${hasPhotos ? 'مشاهده عکس‌ها' : 'بدون عکس'}
+                                </button>
+                            </div>
+                            <div class="bg-slate-950 p-2 rounded-xl flex justify-between items-center gap-2 border border-slate-800">
+                                <div class="flex gap-1">
+                                    ${[1,2,3,4,5].map(s => `
+                                        <button onclick="selectPendingStar(${t.id}, ${s})" class="px-2 py-1 rounded-lg text-xs font-bold transition ${t.pendingStar === s ? 'bg-amber-500 text-slate-950 scale-105 shadow' : 'bg-slate-800 text-slate-300 hover:bg-slate-700'}">${s}⭐</button>
+                                    `).join('')}
+                                </div>
+                                <button onclick="confirmAndLockVote(${t.id})" class="bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-1.5 rounded-xl text-xs font-bold shrink-0 shadow transition">ثبت امتیاز ✔️</button>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
 
             // ۵. رتبه‌بندی امتیازات واحد
             const sortedMembers = [...members].sort((a,b) => b.points - a.points);
-            document.getElementById('rankingList').innerHTML = sortedMembers.length === 0 ? `<div class="text-center py-4 text-xs text-slate-400">هنوز عضوی ثبت نشده است.</div>` : sortedMembers.map((m, i) => `
-                <div class="bg-slate-900 border border-slate-800 p-3 rounded-2xl text-xs space-y-2">
-                    <div class="flex justify-between items-center"><strong class="text-white">#${i+1} ${m.name}</strong><span class="text-amber-400 font-black">${m.points} امتیاز</span></div>
-                    <button onclick="redeemSkip(${m.id})" class="w-full py-2 rounded-xl text-[11px] font-bold transition ${m.points>=50?'bg-amber-500 text-slate-950':'bg-slate-950 text-slate-500 border border-slate-800'}">🎁 معافیت ۱ دوره (کسر ۵۰ امتیاز)</button>
-                </div>
-            `).join('');
+            document.getElementById('rankingList').innerHTML = sortedMembers.length === 0 
+                ? `<div class="text-center py-4 text-xs text-slate-400">هنوز عضوی ثبت نشده است.</div>` 
+                : sortedMembers.map((m, i) => `
+                    <div class="bg-slate-900 border border-slate-800 p-3 rounded-2xl text-xs space-y-2 animate-card">
+                        <div class="flex justify-between items-center">
+                            <strong class="text-white">${i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `#${i+1}`} ${m.name} (${m.sleepZone})</strong>
+                            <span class="text-amber-400 font-black">${m.points} امتیاز</span>
+                        </div>
+                        <button onclick="redeemSkip(${m.id})" class="w-full py-2 rounded-xl text-[11px] font-bold transition ${m.points >= 50 ? 'bg-amber-500 text-slate-950 shadow-lg' : 'bg-slate-950 text-slate-500 border border-slate-800'}">
+                            🎁 دریافت معافیت ۱ دوره کامل (کسر ۵۰ امتیاز)
+                        </button>
+                    </div>
+                `).join('');
         }
 
         function switchTab(tab) {
